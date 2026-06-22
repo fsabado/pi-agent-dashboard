@@ -1,27 +1,25 @@
-import { mdiContentCopy, mdiTable } from "@mdi/js";
-import { Icon } from "@mdi/react";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useRef, useCallback, useMemo, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
-import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { t as i18nT } from "../lib/i18n";
-import { tokenize } from "../lib/linkify-tool-output.js";
-import { useSessionAssets } from "../lib/SessionAssetsContext.js";
-import { getSyntaxTheme } from "../lib/syntax-theme.js";
-import { wrapAsciiTables } from "../lib/wrap-ascii-tables.js";
-import { CopyButton } from "./CopyButton.js";
-import { ErrorBoundary } from "./ErrorBoundary.js";
-import { extractFrontmatter, FrontmatterProperties } from "./FrontmatterProperties.js";
-import { ImageLightbox } from "./ImageLightbox.js";
-import { MermaidBlock } from "./MermaidBlock.js";
+import rehypeRaw from "rehype-raw";
+import rehypeKatex from "rehype-katex";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useThemeContext } from "./ThemeProvider.js";
+import { getSyntaxTheme } from "../lib/syntax-theme.js";
+import { Icon } from "@mdi/react";
+import { mdiContentCopy, mdiTable } from "@mdi/js";
+import { CopyButton } from "./CopyButton.js";
+import { wrapAsciiTables } from "../lib/wrap-ascii-tables.js";
+import { MermaidBlock } from "./MermaidBlock.js";
+import { useSessionAssets } from "../lib/SessionAssetsContext.js";
+import { ImageLightbox } from "./ImageLightbox.js";
+import { tokenize } from "../lib/linkify-tool-output.js";
 import { FileLink } from "./tool-renderers/FileLink.js";
-import type { ToolContext } from "./tool-renderers/types.js";
 import { UrlLink } from "./tool-renderers/UrlLink.js";
+import { ErrorBoundary } from "./ErrorBoundary.js";
+import type { ToolContext } from "./tool-renderers/types.js";
+import { t as i18nT } from "../lib/i18n";
 
 interface Props {
   content: string;
@@ -33,15 +31,6 @@ interface Props {
    * See change: unify-file-link-openability.
    */
   context?: ToolContext;
-  /**
-   * Controls rendering of a leading YAML frontmatter block. `remark-frontmatter`
-   * always strips the block from the markdown body (so it never mangles into a
-   * heading), regardless of this prop. "hide" (default) renders nothing in its
-   * place — preserves chat behavior. "properties" renders an Obsidian-style
-   * Properties panel above the body. File/spec/skill surfaces opt in.
-   * See change: improve-frontmatter-rendering.
-   */
-  frontmatter?: "hide" | "properties";
 }
 
 /**
@@ -152,20 +141,6 @@ export function tableToTsv(table: HTMLTableElement): string {
   return lines.join("\n");
 }
 
-/**
- * Returns true when the fenced block holding `code` has a closing fence in the
- * raw markdown `content`. During streaming an unclosed mermaid block is the
- * trailing fence: its content grows token-by-token with no closing ``` yet, so
- * `after` carries no fence and we report incomplete. Once the fence arrives the
- * block's source is final. Unmatched `code` (e.g. HTML-entity differences) falls
- * back to `true` so rendering is never blocked — worst case is prior behaviour.
- */
-export function isFencedBlockComplete(content: string, code: string): boolean {
-  const idx = content.indexOf(code);
-  if (idx === -1) return true;
-  return content.slice(idx + code.length).includes("```");
-}
-
 function CodeBlockWrapper({ codeString, children }: { codeString: string; children: React.ReactNode }) {
   return (
     <div>
@@ -195,7 +170,7 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
   }, [getTable]);
 
   return (
-    <div ref={ref}>
+    <div ref={ref} style={{ maxWidth: "100%", overflowX: "auto" }}>
       {children}
       <div className="flex justify-end gap-0.5 -mt-1 mb-1 opacity-50 hover:opacity-100 transition-opacity">
         <CopyButton text={copyMarkdown()} icon={<Icon path={mdiContentCopy} size={0.6} />} title={i18nT("auto.copy_as_markdown", undefined, "Copy as Markdown")} />
@@ -367,7 +342,7 @@ function PiAssetImg(props: React.ImgHTMLAttributes<HTMLImageElement>) {
   );
 }
 
-export const MarkdownContent = React.memo(function MarkdownContent({ content, context, frontmatter = "hide" }: Props) {
+export const MarkdownContent = React.memo(function MarkdownContent({ content, context }: Props) {
   // ASCII table monospace fixer — disabled pending further refinement
   // const processedContent = useMemo(() => wrapAsciiTables(content), [content]);
   const processedContent = content;
@@ -382,13 +357,10 @@ export const MarkdownContent = React.memo(function MarkdownContent({ content, co
   //   }
   // });
 
-  const fm = frontmatter === "properties" ? extractFrontmatter(processedContent) : null;
-
   return (
-    <div ref={containerRef} className="markdown-content text-sm">
-      {fm && <FrontmatterProperties raw={fm.raw} />}
+    <div ref={containerRef} className="markdown-content text-sm min-w-0">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath, remarkFrontmatter]}
+        remarkPlugins={[remarkGfm, remarkMath]}
         // Plugin order matters:
         //  - rehypeRaw FIRST so embedded HTML in markdown source is parsed
         //    before rehype-katex emits its own KaTeX HTML (KaTeX HTML must
@@ -411,12 +383,7 @@ export const MarkdownContent = React.memo(function MarkdownContent({ content, co
             const codeString = String(children).replace(/\n$/, "");
 
             if (match && match[1] === "mermaid") {
-              return (
-                <MermaidBlock
-                  code={codeString}
-                  complete={isFencedBlockComplete(processedContent, codeString)}
-                />
-              );
+              return <MermaidBlock code={codeString} />;
             }
 
             if (match) {

@@ -1,38 +1,35 @@
-import { isWidgetBarPrompt } from "@blackbelt-technology/dashboard-plugin-runtime";
-import { EmptyState } from "@blackbelt-technology/pi-dashboard-client-utils/EmptyState";
-import { Skeleton } from "@blackbelt-technology/pi-dashboard-client-utils/Skeleton";
-import { toolCallPrefKey } from "@blackbelt-technology/pi-dashboard-shared/display-prefs.js";
-import { mdiChevronDown, mdiClose, mdiContentCopy, mdiLoading, mdiSourceFork, mdiTextBox } from "@mdi/js";
+import React, { useRef, useEffect, useCallback, useState, useMemo, forwardRef, useImperativeHandle } from "react";
 import { Icon } from "@mdi/react";
-import React, { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { isDebugTool } from "../hooks/useDebugToolsVisible.js";
-import { useDisplayPrefs } from "../hooks/useDisplayPrefs.js";
-import { useMobile } from "../hooks/useMobile.js";
-import { findActiveInteractiveToolResultIds, findRetriedErrorIds } from "../lib/collapse-retried-errors.js";
+import { mdiContentCopy, mdiTextBox, mdiLoading, mdiChevronDown, mdiSourceFork, mdiClose } from "@mdi/js";
 // RetryBanner + ErrorBanner replaced by the unified SessionBanner mounted
 // in App.tsx (sticky above the command input). See change:
 // unify-status-banner-and-terminal-limit-stop.
-import type { ChatImage, InteractiveUiRequest, SessionState } from "../lib/event-reducer.js";
-import { formatMessageTime } from "../lib/format.js";
-import { type ChatItem, groupConsecutiveToolCalls, type ToolCallGroup } from "../lib/group-tool-calls.js";
-import { t as i18nT } from "../lib/i18n";
-import { BashOutputCard } from "./BashOutputCard.js";
-import { CollapsedToolGroup } from "./CollapsedToolGroup.js";
-import { CommandFeedbackCard } from "./CommandFeedbackCard.js";
-import { CopyButton } from "./CopyButton.js";
-import { MissingToolInlineError } from "./chat/MissingToolInlineError.js";
-import { FilePreviewHost, FilePreviewProvider } from "./FilePreviewContext.js";
-import { ImageLightbox } from "./ImageLightbox.js";
-import { InlineTerminalCard } from "./InlineTerminalCard.js";
-import { getInteractiveRenderer } from "./interactive-renderers/registry.js";
-import { MarkdownContent } from "./MarkdownContent.js";
-import { PreviewCard } from "./PreviewCard.js";
-import { RawEventCard } from "./RawEventCard.js";
-import { RetriedErrorBadge } from "./RetriedErrorBadge.js";
-import { SkillInvocationCard } from "./SkillInvocationCard.js";
-import { ThinkingBlock } from "./ThinkingBlock.js";
-import { ToolCallStep } from "./ToolCallStep.js";
+import type { SessionState, ChatImage, InteractiveUiRequest } from "../lib/event-reducer.js";
 import type { ToolContext } from "./tool-renderers/index.js";
+import { MarkdownContent } from "./MarkdownContent.js";
+import { CopyButton } from "./CopyButton.js";
+import { ToolCallStep } from "./ToolCallStep.js";
+import { ThinkingBlock } from "./ThinkingBlock.js";
+import { BashOutputCard } from "./BashOutputCard.js";
+import { MissingToolInlineError } from "./chat/MissingToolInlineError.js";
+import { CommandFeedbackCard } from "./CommandFeedbackCard.js";
+import { RawEventCard } from "./RawEventCard.js";
+import { formatMessageTime } from "../lib/format.js";
+import { useMobile } from "../hooks/useMobile.js";
+import { isDebugTool } from "../hooks/useDebugToolsVisible.js";
+import { useDisplayPrefs } from "../hooks/useDisplayPrefs.js";
+import { toolCallPrefKey } from "@blackbelt-technology/pi-dashboard-shared/display-prefs.js";
+import { getInteractiveRenderer } from "./interactive-renderers/registry.js";
+import { isWidgetBarPrompt } from "@blackbelt-technology/dashboard-plugin-runtime";
+import { groupConsecutiveToolCalls, type ChatItem, type ToolCallGroup } from "../lib/group-tool-calls.js";
+import { CollapsedToolGroup } from "./CollapsedToolGroup.js";
+import { findRetriedErrorIds, findActiveInteractiveToolResultIds } from "../lib/collapse-retried-errors.js";
+import { RetriedErrorBadge } from "./RetriedErrorBadge.js";
+import { ImageLightbox } from "./ImageLightbox.js";
+import { SkillInvocationCard } from "./SkillInvocationCard.js";
+import { PreviewCard } from "./PreviewCard.js";
+import { InlineTerminalCard } from "./InlineTerminalCard.js";
+import { t as i18nT } from "../lib/i18n";
 
 interface Props {
   sessionId?: string;
@@ -198,11 +195,25 @@ export interface ChatViewHandle {
 
 export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ sessionId, state, toolContext, onRespondToUi, onAbort, onForceKill, onForkFromMessage, onCloseInlineTerminal, queuedTexts, pendingSteering, loadingHistory }, ref) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  // True when the user wants the chat to chase new content. Flips to false on
-  // any real scroll-up gesture, on explicit navigation (scrollToTurn), and on
-  // session restore when the saved position was away from the bottom. Re-arms
-  // when the user clicks the scroll-to-bottom button or scrolls back to the end.
-  const stickToBottomRef = useRef(true);
+  const isNearBottom = useRef(true);
+  const programmaticScroll = useRef(false);
+  // Race-safe across multi-batch event_replay: when ChatView itself initiates a
+  // scroll, the resulting onScroll can fire after another replay batch has grown
+  // scrollHeight, making handleScroll misread the geometry as "user scrolled up".
+  // markProgrammatic() raises programmaticScroll for ~150ms so handleScroll
+  // ignores any onScroll attributable to our own scrollTo call.
+  const programmaticTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markProgrammatic = useCallback(() => {
+    programmaticScroll.current = true;
+    if (programmaticTimeout.current) clearTimeout(programmaticTimeout.current);
+    programmaticTimeout.current = setTimeout(() => {
+      programmaticScroll.current = false;
+      programmaticTimeout.current = null;
+    }, 150);
+  }, []);
+  useEffect(() => () => {
+    if (programmaticTimeout.current) clearTimeout(programmaticTimeout.current);
+  }, []);
   const [showScrollButton, setShowScrollButton] = useState(false);
   // Effective display prefs for this session (configurable-chat-display).
   const prefs = useDisplayPrefs(sessionId);
@@ -214,10 +225,15 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
   const bubbleWide = isMobile ? "w-[95%]" : "w-[95%]";
 
   const handleScroll = useCallback(() => {
+    // Suppress scroll measurements caused by our own programmatic scrollTo. The
+    // onScroll event lags scrollTo and can fire after the next replay batch has
+    // grown scrollHeight; measuring then would falsely conclude the user scrolled
+    // away from the bottom. Only real user gestures should reach this code path.
+    if (programmaticScroll.current) return;
     const el = scrollRef.current;
     if (!el) return;
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < SCROLL_THRESHOLD;
-    stickToBottomRef.current = nearBottom;
+    isNearBottom.current = nearBottom;
     setShowScrollButton(!nearBottom);
     // Persist scroll position for this session
     if (sessionId) {
@@ -228,27 +244,23 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Smooth when quiet, instant when streaming/tool output is active so the
-    // animation cannot race with incoming chunks and re-introduce jumps.
-    const isStreaming = Boolean(state.streamingText || state.streamingThinking || pendingSteering?.length);
-    el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "instant" : "smooth" });
-    stickToBottomRef.current = true;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    isNearBottom.current = true;
     setShowScrollButton(false);
     if (sessionId) {
       scrollStateMap.set(sessionId, { scrollTop: el.scrollHeight, nearBottom: true });
     }
-  }, [sessionId, state.streamingText, state.streamingThinking, pendingSteering]);
+  }, [sessionId]);
 
-  // Save scroll state when leaving, restore when arriving. Layout effect keeps
-  // the restored position synchronized with the first paint so there is no flash.
-  useLayoutEffect(() => {
+  // Save scroll state when leaving, restore when arriving
+  useEffect(() => {
     if (sessionId !== prevSessionRef.current) {
       // Save outgoing session scroll position
       const prevId = prevSessionRef.current;
       if (prevId && scrollRef.current) {
         scrollStateMap.set(prevId, {
           scrollTop: scrollRef.current.scrollTop,
-          nearBottom: stickToBottomRef.current,
+          nearBottom: isNearBottom.current,
         });
       }
       prevSessionRef.current = sessionId;
@@ -257,27 +269,37 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
       const saved = sessionId ? scrollStateMap.get(sessionId) : undefined;
       if (saved && !saved.nearBottom) {
         // Scroll-locked: restore exact position
-        stickToBottomRef.current = false;
+        isNearBottom.current = false;
         setShowScrollButton(true);
-        scrollRef.current?.scrollTo(0, saved.scrollTop);
+        requestAnimationFrame(() => {
+          markProgrammatic();
+          scrollRef.current?.scrollTo(0, saved.scrollTop);
+        });
       } else {
-        // Near bottom or first visit: scroll to end and follow new content
-        stickToBottomRef.current = true;
+        // Near bottom or first visit: scroll to end
+        isNearBottom.current = true;
         setShowScrollButton(false);
-        scrollRef.current?.scrollTo(0, scrollRef.current!.scrollHeight);
+        requestAnimationFrame(() => {
+          markProgrammatic();
+          scrollRef.current?.scrollTo(0, scrollRef.current!.scrollHeight);
+        });
       }
     }
   }, [sessionId]);
 
-  // Auto-scroll on new content when the user has not escaped the bottom.
-  // Layout effect keeps the DOM and scroll position synchronized before paint,
-  // eliminating the per-line jumps caused by async scrollTo calls.
-  useLayoutEffect(() => {
-    if (stickToBottomRef.current) {
-      const el = scrollRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
+  // Auto-scroll on new content when near bottom. We deliberately do NOT gate on
+  // programmaticScroll here — repeated replay batches must keep chasing the tail.
+  // The flag is only consulted inside handleScroll to ignore the spurious onScroll
+  // events that follow each scrollTo. scrollToTurn opts out by setting
+  // isNearBottom.current = false, which still gates this effect.
+  useEffect(() => {
+    if (isNearBottom.current) {
+      requestAnimationFrame(() => {
+        markProgrammatic();
+        scrollRef.current?.scrollTo(0, scrollRef.current!.scrollHeight);
+      });
     }
-  }, [state.messages.length, state.streamingText, state.pendingPrompt, state.streamingThinking, pendingSteering]);
+  }, [state.messages.length, state.streamingText, state.pendingPrompt, markProgrammatic]);
 
   // Group consecutive repeated tool calls for cleaner display.
   // Also drop user messages flagged `retriedFrom` (manual Retry button
@@ -299,24 +321,23 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
       if (!container) return;
       const el = container.querySelector(`[data-turn="${turnIndex}"]`) as HTMLElement | null;
       if (!el) return;
-      // Escape sticky bottom so streaming does not pull the user away from the
-      // navigated turn.
-      stickToBottomRef.current = false;
+      // Suppress auto-scroll during programmatic navigation
+      programmaticScroll.current = true;
+      isNearBottom.current = false;
       setShowScrollButton(true);
       // Use getBoundingClientRect for reliable position calculation
       const containerRect = container.getBoundingClientRect();
       const elRect = el.getBoundingClientRect();
       const targetTop = container.scrollTop + (elRect.top - containerRect.top);
       container.scrollTo({ top: targetTop, behavior: "instant" });
+      // Re-enable auto-scroll after a delay
+      setTimeout(() => { programmaticScroll.current = false; }, 200);
     },
   }), []);
 
   return (
-    // Key by sessionId so switching sessions (ChatView is reused, not remounted)
-    // resets the hoisted preview — a preview open in session A never leaks into B.
-    <FilePreviewProvider key={sessionId}>
     <div className="flex-1 relative overflow-hidden flex flex-col">
-    <div ref={scrollRef} onScroll={handleScroll} style={{ overflowAnchor: "auto" }} className={`h-full overflow-y-auto ${isMobile ? "p-2" : "p-4"} space-y-1`}>
+    <div ref={scrollRef} onScroll={handleScroll} className={`h-full overflow-y-auto overflow-x-hidden ${isMobile ? "p-2" : "p-4"} space-y-1`}>
       {groupedMessages.map((item, idx) => {
         // Collapsed group of repeated tool calls
         if ((item as ToolCallGroup).type === "group") {
@@ -373,7 +394,7 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
           return (
             <div key={msg.id} className="mt-4 mb-4 flex flex-col items-end" {...(msg.turnIndex != null ? { "data-turn": msg.turnIndex } : {})}>
               {msg.streamingBehavior && <StreamingBehaviorBadge behavior={msg.streamingBehavior} />}
-              <div className={`bg-blue-500/10 border border-blue-500/20 border-l-2 border-l-blue-400 rounded-xl shadow-md px-4 py-2 ${bubbleMax}`}>
+              <div className={`bg-blue-500/10 border border-blue-500/20 border-l-2 border-l-blue-400 rounded-xl shadow-md px-4 py-2 overflow-hidden ${bubbleMax}`}>
                 {msg.images && msg.images.length > 0 && (
                   <ImageAttachments images={msg.images} />
                 )}
@@ -462,7 +483,6 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
               output={msg.content}
               exitCode={args?.exitCode ?? 0}
               excludeFromContext={args?.excludeFromContext ?? false}
-              source={args?.source}
               timestamp={msg.timestamp}
             />
           );
@@ -539,7 +559,7 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
           <div key={msg.id} className="mt-4 mb-4 flex justify-start">
             <MessageBubble
               content={msg.content}
-              className={`bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-xl shadow-md px-4 py-2 ${bMax}`}
+              className={`bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-xl shadow-md px-4 py-2 overflow-hidden ${bMax}`}
               timestamp={msg.timestamp}
               entryId={msg.entryId}
               onFork={onForkFromMessage}
@@ -562,7 +582,7 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
       {/* Streaming text */}
       {state.streamingText && (
         <div className="flex justify-start">
-          <div className={`bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-xl shadow-md px-4 py-2 ${hasMermaid(state.streamingText) ? bubbleWide : bubbleMax}`}>
+          <div className={`bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-xl shadow-md px-4 py-2 overflow-hidden ${hasMermaid(state.streamingText) ? bubbleWide : bubbleMax}`}>
             <MarkdownContent content={state.streamingText} context={toolContext} />
             <span className="inline-block w-1.5 h-4 bg-[var(--bg-surface)] animate-pulse ml-0.5" />
           </div>
@@ -627,25 +647,13 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
       */}
       {state.messages.length === 0 && !state.streamingText && !(state.pendingPrompt && !(queuedTexts?.includes(state.pendingPrompt.text))) && !(pendingSteering && pendingSteering.length > 0) && (
         loadingHistory ? (
-          <div
-            className="flex flex-col gap-3 px-4 py-3"
-            aria-busy="true"
-            role="status"
-            aria-label={i18nT("auto.loading_conversation", undefined, "Loading conversation…")}
-            data-testid="chat-history-skeleton"
-          >
-            <Skeleton variant="bubble" count={3} />
+          <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] gap-2">
+            <Icon path={mdiLoading} size={0.8} className="animate-spin" />
+            <p>{i18nT("auto.loading_conversation", undefined, "Loading conversation…")}</p>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <EmptyState
-              title={i18nT("auto.no_messages_yet", undefined, "No messages yet")}
-              body={i18nT(
-                "auto.no_messages_yet_body",
-                undefined,
-                "Send a prompt below to start the conversation.",
-              )}
-            />
+          <div className="flex items-center justify-center h-full text-[var(--text-tertiary)]">
+            <p>{i18nT("auto.no_messages_yet", undefined, "No messages yet")}</p>
           </div>
         )
       )}
@@ -661,7 +669,5 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
       </button>
     )}
     </div>
-    <FilePreviewHost />
-    </FilePreviewProvider>
   );
 });
