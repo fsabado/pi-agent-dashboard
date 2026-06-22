@@ -170,7 +170,7 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
   }, [getTable]);
 
   return (
-    <div ref={ref}>
+    <div ref={ref} style={{ maxWidth: "100%", overflowX: "auto" }}>
       {children}
       <div className="flex justify-end gap-0.5 -mt-1 mb-1 opacity-50 hover:opacity-100 transition-opacity">
         <CopyButton text={copyMarkdown()} icon={<Icon path={mdiContentCopy} size={0.6} />} title={i18nT("auto.copy_as_markdown", undefined, "Copy as Markdown")} />
@@ -358,7 +358,7 @@ export const MarkdownContent = React.memo(function MarkdownContent({ content, co
   // });
 
   return (
-    <div ref={containerRef} className="markdown-content text-sm">
+    <div ref={containerRef} className="markdown-content text-sm min-w-0">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         // Plugin order matters:
