@@ -244,8 +244,13 @@ export async function registerAuthPlugin(
   // ─── onRequest Hook ─────────────────────────────────────────────────────
 
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
-    // Localhost bypass
-    if (isLoopback(request.ip)) return;
+    // Localhost bypass — only skip auth when BOTH the IP is loopback AND
+    // the Host header is localhost/127.0.0.1. Tunnel proxies (zrok) forward
+    // from 127.0.0.1 but set Host to the public tunnel hostname, so this
+    // correctly treats tunnel traffic as external.
+    const host = (request.headers.host || "").split(":")[0];
+    const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    if (isLoopback(request.ip) && isLocalHost) return;
 
     // Skip auth routes
     if (request.url.startsWith("/auth/")) return;
