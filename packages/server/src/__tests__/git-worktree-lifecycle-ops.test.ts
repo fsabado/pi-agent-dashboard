@@ -118,6 +118,9 @@ describe("resolveRemoteBase", () => {
     // Push a non-fallback branch; remove main from origin so no fallback matches.
     git("checkout -b feat", repo);
     git("push origin feat", repo);
+    // Must change bare repo HEAD away from main before deleting it (git refuses
+    // to delete the branch currently pointed to by HEAD).
+    git("symbolic-ref HEAD refs/heads/feat", bare);
     git("push origin --delete main", repo);
     git("remote prune origin", repo);
     // Hint that doesn't exist on origin: should fall through fallbacks and find nothing.
