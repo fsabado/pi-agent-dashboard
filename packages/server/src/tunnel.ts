@@ -314,23 +314,30 @@ function _createTunnelInner(
       return;
     }
 
+    const isV2 = env.kind === "v2";
+
     // Track whether this call reserved the token itself (so we know to
     // release it if we subsequently time out or fail — the caller-provided
     // `reservedToken` is owned by the caller / config and must not be released
     // on transient timeouts).
     const callerProvidedToken = !!reservedToken;
     let token = reservedToken;
-    if (!token) {
+    // zrok v2 dropped the `reserve` command — skip reserved shares entirely
+    // for v2 and always use ephemeral public shares.
+    if (!token && !isV2) {
       token = await reserveShare(port) ?? undefined;
     }
 
     let resolved = false;
     let output = "";
 
-    // Use reserved share if we have a token, otherwise fall back to public
+    // Use reserved share if we have a token, otherwise fall back to public.
+    // zrok v2: --force-local bypasses agent dispatch so the process stays alive.
     const args = token
       ? ["share", "reserved", token, "--headless", "--override-endpoint", `http://localhost:${port}`]
-      : ["share", "public", "--headless", `http://localhost:${port}`];
+      : isV2
+        ? ["share", "public", `http://localhost:${port}`, "--headless", "--force-local"]
+        : ["share", "public", "--headless", `http://localhost:${port}`];
 
     const child = spawn(getZrokBinary(), args, {
       stdio: ["ignore", "pipe", "pipe"],
@@ -365,12 +372,16 @@ function _createTunnelInner(
 
     const handleOutput = (chunk: Buffer) => {
       output += chunk.toString();
-      // zrok prints the tunnel URL to stdout or stderr — match the public share URL (not localhost)
-      const urlMatch = output.match(/https?:\/\/[^\s"]*\.share\.zrok\.io[^\s"]*/)
+      // zrok prints the tunnel URL to stdout or stderr — match the public share URL (not localhost).
+      // v1: `https://abc.share.zrok.io`  v2: `abc.shares.zrok.io` (no scheme, plural)
+      const urlMatch = output.match(/https?:\/\/[^\s"]*\.shares?\.zrok\.io[^\s"]*/) ??
+        output.match(/([a-z0-9]+\.shares?\.zrok\.io)/);
       if (urlMatch && !resolved) {
         resolved = true;
         clearTimeout(timeout);
-        const url = urlMatch[0];
+        // Ensure the URL always carries an https:// scheme.
+        const raw = urlMatch[1] ?? urlMatch[0];
+        const url = raw.startsWith("http") ? raw : `https://${raw}`;
         activeTunnelUrl = url;
         activeProcess = child;
         writeZrokPid(child.pid!);

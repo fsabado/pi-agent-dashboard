@@ -370,6 +370,25 @@ Cross-refs:
 - docs/architecture.md:878
 - docs/architecture.md:1264
 
+## Why does GitHub/Google OAuth not protect tunnel access?
+
+Root cause: `auth-plugin.ts` `onRequest` hook bypasses auth when `request.ip` is loopback (`127.0.0.1`). zrok proxies all external traffic from localhost — every request including from the public internet arrives with `request.ip === "127.0.0.1"` and bypasses auth.
+
+Fix applied to `packages/server/src/auth-plugin.ts`: check both IP and `Host` header.
+
+```typescript
+const host = (request.headers.host || "").split(":")[0];
+const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+if (isLoopback(request.ip) && isLocalHost) return;
+```
+
+Requests through tunnel carry `Host: <token>.share.zrok.io` — treated as external, must authenticate. Localhost direct access (`Host: localhost`) still unguarded.
+
+If running bundled Electron app, also patch:
+`/Applications/PI-Dashboard.app/Contents/Resources/server/node_modules/@blackbelt-technology/pi-dashboard-server/src/auth-plugin.ts`
+
+App updates overwrite bundle patch — source fix ships in next release.
+
 ## How do I set up a zrok tunnel for a persistent public URL?
 
 Install zrok, enrol with token, leave `tunnel.enabled: true` (default).
@@ -417,6 +436,92 @@ Disable: set `tunnel.watchdog.enabled: false` (or untick in Settings).
 Cross-refs:
 - docs/architecture.md → "Tunnel watchdog"
 - packages/server/src/tunnel-watchdog.ts
+
+## Why does zrok not start on the standalone macOS app?
+
+Two root causes, check in order.
+
+**1. Binary not on server runtime PATH**
+
+Bundled `ToolResolver` in `tunnel.ts` initialises without `useLoginShell: true` — only searches process-inherited PATH (from `/etc/paths`), not the login shell PATH. Homebrew installs to `/opt/homebrew/bin/` which is in login shell PATH but not `/etc/paths`.
+
+Symptom: no tunnel log lines at startup — not even `zrok not enrolled`. `detectZrokBinary()` returns false silently.
+
+Fix: symlink zrok into a PATH location the server process inherits:
+
+```bash
+ln -sf /opt/homebrew/bin/zrok ~/.local/bin/zrok
+```
+
+Restart dashboard. Verify: `grep '🌐' ~/.pi/dashboard/server.log`.
+
+Note: `tool-overrides.json` (`~/.pi/dashboard/tool-overrides.json`) does NOT fix this — feeds `ToolRegistry` (Doctor UI / `/api/tools`) but `tunnel.ts` uses a separate `ToolResolver` instance that ignores overrides.
+
+**2. Not enrolled**
+
+Symptom: `zrok not enrolled — skipping tunnel creation` in server log.
+
+Fix: `zrok enable <token>` — token from https://zrok.io. Writes `~/.zrok/environment.json`.
+
+## Is zrok v2 compatible with the dashboard?
+
+No. Dashboard built for zrok v1. Three incompatibilities:
+
+| Issue | v1 | v2 |
+|---|---|---|
+| Reserve command | `zrok reserve public` | removed |
+| Process model | long-lived subprocess | dispatches to agent, exits immediately |
+| URL format | `https://abc.share.zrok.io` | `abc.shares.zrok.io` (no scheme, plural) |
+
+Use zrok v1: `brew install zrok` gives v1.x.
+
+If v2 already installed as `zrok2`, symlink does not help — reserve command still fails. Install v1 separately via brew.
+
+## Why does the "Dashboard plugins were updated" banner appear after installing a plugin?
+
+The client JS bundle has a hash baked in at build time (`PLUGIN_REGISTRY_HASH`). The server computes `bundleHash` at runtime from the currently discovered plugin set. When they differ, the staleness banner fires.
+
+Installing any plugin that contributes dashboard UI (e.g. `pi-dashboard-subagents`) changes the runtime plugin set → hash mismatch → banner.
+
+On the standalone Electron app this mismatch is permanent until the app ships a build that includes the plugin. Hard refresh (`Cmd+Shift+R`) reloads the same static client JS — hashes still differ. Dismiss button uses `sessionStorage` — resets every new tab.
+
+Options:
+- **Ignore** — plugin works on the pi side; only dashboard UI contributions are missing.
+- **Patch the built client** — see below.
+- **Wait for app update** — next release may bundle the plugin.
+- **Uninstall the plugin** — `pi remove git:github.com/BlackBeltTechnology/pi-dashboard-subagents`
+
+## How do I permanently suppress the staleness banner on the standalone app?
+
+Patch the built client JS to never set the mismatch flag:
+
+```bash
+sed -i '' 's/t(L\.bundleHash!==vi)/t(false)/g' \
+  /Applications/PI-Dashboard.app/Contents/Resources/server/packages/dist/client/assets/index-*.js
+```
+
+Verify:
+```bash
+grep 'bundleHash' /Applications/PI-Dashboard.app/Contents/Resources/server/packages/dist/client/assets/index-*.js
+# should show: t(false)
+```
+
+App updates overwrite this patch — re-run after each update.
+
+## How do I install pi packages on the standalone macOS app?
+
+Use `pi install` from the terminal — NOT the dashboard UI install button. The dashboard UI package manager requires `pi-coding-agent` to be resolvable as a module, which fails in the bundled app context.
+
+```bash
+# Install from git
+pi install git:github.com/BlackBeltTechnology/pi-anthropic-messages
+pi install git:github.com/BlackBeltTechnology/pi-dashboard-subagents
+
+# Remove
+pi remove git:github.com/BlackBeltTechnology/pi-dashboard-subagents
+```
+
+Then reload running sessions: Settings → Reload, or `npm run reload` from the source repo.
 
 ## How do I customize tool paths instead of using PATH?
 
