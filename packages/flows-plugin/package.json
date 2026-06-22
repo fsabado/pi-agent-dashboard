@@ -1,6 +1,6 @@
 {
   "name": "@blackbelt-technology/pi-dashboard-flows-plugin",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Flow rendering plugin for pi-dashboard — pi-flows event reaction (FlowDashboard, FlowAgentCard, FlowArchitect, etc.)",
   "license": "MIT",
   "publishConfig": {
@@ -33,7 +33,6 @@
     "id": "flows",
     "displayName": "Flows",
     "priority": 100,
-    "configSchema": "./src/configSchema.json",
     "client": "./src/client/index.tsx",
     "server": "./src/server/index.ts",
     "bridge": "./src/bridge/index.ts",
@@ -48,19 +47,13 @@
         "component": "FlowDashboardClaim"
       },
       {
+        "slot": "content-header-sticky",
+        "component": "FlowArchitectClaim"
+      },
+      {
         "slot": "content-view",
         "component": "FlowYamlPreviewClaim",
         "predicate": "isFlowYamlPreviewActive"
-      },
-      {
-        "slot": "tool-renderer",
-        "component": "FlowWriteToolRenderer",
-        "toolName": "flow_write"
-      },
-      {
-        "slot": "tool-renderer",
-        "component": "FlowAgentsToolRenderer",
-        "toolName": "flow_agents"
       },
       {
         "slot": "shell-overlay-route",
@@ -69,9 +62,10 @@
         "sessionParam": "sid"
       },
       {
-        "slot": "settings-section",
-        "component": "FlowsSettings",
-        "tab": "general"
+        "slot": "shell-overlay-route",
+        "component": "FlowArchitectPopoutClaim",
+        "path": "/session/:sid/architect",
+        "sessionParam": "sid"
       }
     ]
   },
@@ -81,10 +75,9 @@
   },
   "//deps-rationale": "client-utils retained for hooks (useMobile, useZoomPan) and Phase-2 extension-ui slot consumers (AgentMetricSlot, BreadcrumbSlot, GateSlot, aggregateGateState helper). All UI primitive components (AgentCardShell, MarkdownContent, ConfirmDialog, DialogPortal, SearchableSelectDialog, ZoomControls, format-tokens, format-duration) flow through the UI primitive registry per add-plugin-ui-primitive-registry.",
   "dependencies": {
-    "@blackbelt-technology/dashboard-plugin-runtime": "^0.5.4",
-    "@blackbelt-technology/pi-dashboard-client-utils": "^0.5.4",
-    "@blackbelt-technology/pi-dashboard-shared": "^0.5.4",
-    "yaml": "^2.9.0"
+    "@blackbelt-technology/dashboard-plugin-runtime": "^0.5.5",
+    "@blackbelt-technology/pi-dashboard-client-utils": "^0.5.5",
+    "@blackbelt-technology/pi-dashboard-shared": "^0.5.5"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
