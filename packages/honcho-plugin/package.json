@@ -1,6 +1,6 @@
 {
   "name": "@blackbelt-technology/pi-dashboard-honcho-plugin",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Honcho persistent-memory plugin for pi-dashboard — settings panel, per-card actions, self-host docker lifecycle, aggregate model listing.",
   "license": "MIT",
   "publishConfig": {
@@ -71,8 +71,8 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
-    "@blackbelt-technology/dashboard-plugin-runtime": "^0.5.4",
-    "@blackbelt-technology/pi-dashboard-shared": "^0.5.4",
+    "@blackbelt-technology/dashboard-plugin-runtime": "^0.5.5",
+    "@blackbelt-technology/pi-dashboard-shared": "^0.5.5",
     "@honcho-ai/sdk": "^1.0.0",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1"
