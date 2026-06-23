@@ -182,6 +182,10 @@ Always grep the file — never rerun `npm test` just to see errors.
 
 ## Cross-Platform QA Testing
 
+Two QA layers, additive — neither replaces the other:
+- **VM smoke (`qa/`)** — clean-install + process runtime across OSes (below).
+- **Browser E2E (`tests/e2e/`)** — Playwright rendered-UI behaviour (see next section).
+
 VM-based QA testing for verifying clean-state installation and runtime across platforms.
 
 ```bash
@@ -202,6 +206,16 @@ make clean              # Destroy all cloned VMs
 | `qa/scripts/` | VM lifecycle (clone, wait-ssh, destroy, run-test) |
 | `qa/tests/` | Test suite (install, server, websocket, terminal, git) |
 | `qa/README.md` | Full setup and usage documentation |
+
+### Playwright Browser E2E (`tests/e2e/`)
+
+**Convention: new browser-level QA scenarios are authored as Playwright specs in `tests/e2e/`, run against the Docker test container.** Do NOT add browser-rendered assertions to `qa/tests/*.sh,*.ps1` (those stay CLI/process smoke).
+
+- Target: `http://localhost:18000` (the disposable `docker/` test harness).
+- Lifecycle: Playwright `globalSetup` runs `docker/test-up.sh` and waits for `/api/health` → 200; `globalTeardown` runs `docker/test-down.sh` (discards all state).
+- Fast path: `PW_E2E_USE_RUNNING=1 npm run test:e2e` attaches to an already-running container and skips teardown.
+- E2E is opt-in (`npm run test:e2e`), separate from the vitest unit run (`npm test`). Requires Docker + `npx playwright install chromium`.
+- Spec/tasks: `openspec/changes/add-playwright-e2e/` (harness lands first; scenarios tracked as follow-up tasks).
 
 ## Investigation Protocol — Index First
 
@@ -314,6 +328,8 @@ In `--dev` mode, the server proxies to Vite for HMR. If Vite is not running, it 
 - **Single restart path** (change: fix-restart-bridge-auto-start-race): `/api/restart` is the single source of truth. `pi-dashboard restart` (CLI) probes `isDashboardRunning(port)` and **delegates to `/api/restart`** when the dashboard is up; only when no dashboard is running does it fall back to local `cmdStop` + `cmdStart`. The `restart-helper.ts` orchestrator runs detached, kills the previous PID explicitly (SIGTERM → SIGKILL), then spawns the replacement. Before exit, the server broadcasts `server_restarting { reason, quiesceMs }` to every connected pi bridge so bridges suppress their auto-start spawn step for the quiesce window (5 s for restart, 60 s for shutdown) and don't race the orchestrator. Discovery + reconnection still run during the window so bridges pick up the new server as soon as it advertises.
 
 ## OpenSpec Conventions
+
+In a git worktree, use the worktree parent's `.pi/skills` (opsx/OpenSpec skills) — resolve OpenSpec skills from the main repo root, not the worktree checkout.
 
 When creating OpenSpec change artifacts, always place them at `openspec/changes/<name>/` — never nest under subdirectories like `active/` or `archive/`. Prefer using `openspec change new <name>` CLI to scaffold the directory structure correctly.
 

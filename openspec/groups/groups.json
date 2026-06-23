@@ -105,10 +105,20 @@
     "project-init-skill-and-profiles": "next-phase",
     "restore-pi-version-skew-surface": "sdasdasd",
     "add-release-video-pipeline": "future",
+    "scope-openspec-poll-to-active-cwds": "ui",
+    "offload-openspec-poll-to-worker": "ui",
+    "instrument-session-hydration-timing": "ui",
+    "offload-session-events-load-to-worker": "ui",
+    "fix-worktree-spawn-placeholder-and-ordering": "ui",
+    "auto-init-worktree-on-spawn": "ui",
+    "show-chat-history-loading-indicator": "ui",
     "fix-settings-mobile-layout": "ui",
+    "suppress-hidden-session-auto-navigation": "ui",
     "remove-project-readme-button": "ui",
     "fix-automation-slot-parity-and-routing": "ui",
-    "add-goals-folder-page": "ui"
+    "add-goals-folder-page": "ui",
+    "throttle-idle-ui-animations": "ui",
+    "fix-automation-result-capture": "ui"
   },
   "changeOrder": {
     "__ungrouped__": [
@@ -116,12 +126,8 @@
       "selectable-tool-output-links"
     ],
     "ui": [
-      "remove-project-readme-button",
-      "fix-automation-slot-parity-and-routing",
-      "add-goals-folder-page",
-      "add-end-user-docs",
-      "docker-test-harness",
-      "restore-windows-nsis-installer"
+      "fix-automation-result-capture",
+      "add-end-user-docs"
     ],
     "next-phase": [
       "add-dashboard-slash-commands",

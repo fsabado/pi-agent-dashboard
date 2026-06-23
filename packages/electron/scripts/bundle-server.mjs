@@ -115,6 +115,9 @@ const BUNDLED_PLUGINS = [
   "flows-plugin",
   "honcho-plugin",
   "flows-anthropic-bridge-plugin",
+  "automation-plugin",
+  "goal-plugin",
+  "subagents-plugin",
 ];
 const BUNDLED_PLUGINS_DIR = path.join(SERVER_BUNDLE, "resources", "plugins");
 mkdirSync(BUNDLED_PLUGINS_DIR, { recursive: true });
