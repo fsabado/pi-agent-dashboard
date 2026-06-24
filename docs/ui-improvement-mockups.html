@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PI Dashboard — UI Improvement Mockups</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b22;
+    --bg3: #1c2128;
+    --bg4: #21262d;
+    --border: #30363d;
+    --border2: #484f58;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --blue: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --teal: #39d353;
+    --accent: #1f6feb;
+    --token-before: #1a1e27;
+    --token-after: #161b22;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+
+  /* ── Page chrome ── */
+  header { padding: 32px 40px 20px; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  header p { color: var(--text2); font-size: 13px; }
+  .toc { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+  .toc a { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; color: var(--text2); text-decoration: none; transition: all .15s; }
+  .toc a:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ── Sections ── */
+  section { padding: 40px; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+  .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .section-title h2 { font-size: 18px; font-weight: 700; }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .badge.high { background: #3d1a1a; color: #f85149; border: 1px solid #5a2020; }
+  .badge.medium { background: #2d2a1a; color: #d29922; border: 1px solid #4a3e18; }
+  .badge.low { background: #1a2d1a; color: #3fb950; border: 1px solid #1e4020; }
+  .file-ref { font-size: 11px; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 4px; font-family: monospace; margin-bottom: 16px; display: inline-block; }
+  .section-desc { color: var(--text2); font-size: 13px; margin-bottom: 24px; max-width: 720px; line-height: 1.6; }
+
+  /* ── Comparison grid ── */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+  .compare-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .compare-card.before { border-color: #3d2020; }
+  .compare-card.option-a { border-color: #1e3a1e; }
+  .compare-card.option-b { border-color: #1a2d3d; }
+  .compare-card.option-c { border-color: #2d1a3d; }
+  .card-label { padding: 6px 12px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .before .card-label { background: #2a1515; color: #f85149; }
+  .option-a .card-label { background: #0d2014; color: #3fb950; }
+  .option-b .card-label { background: #0d1e2a; color: var(--blue); }
+  .option-c .card-label { background: #1e0d2a; color: var(--purple); }
+  .card-body { padding: 12px; background: var(--bg2); min-height: 80px; }
+  .card-note { padding: 8px 12px; background: var(--bg3); font-size: 11px; color: var(--text2); border-top: 1px solid var(--border); line-height: 1.5; }
+
+  /* ──────────────────────────────────────────
+     MOCK COMPONENTS — shared atoms
+  ────────────────────────────────────────── */
+  .mock { font-size: 11px; }
+  .mono { font-family: monospace; }
+
+  /* Pill / chip */
+  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); }
+  .pill.blue { border-color: #1e3a5a; background: #0d1e2a; color: var(--blue); }
+  .pill.green { border-color: #1e3a1e; background: #0d2014; color: var(--green); }
+  .pill.yellow { border-color: #4a3e18; background: #2d2a1a; color: var(--yellow); }
+  .pill.red { border-color: #3d1a1a; background: #2a1515; color: var(--red); }
+  .pill.purple { border-color: #2d1a3d; background: #1e0d2a; color: var(--purple); }
+
+  /* Button atoms */
+  .btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; transition: all .15s; }
+  .btn:hover { border-color: var(--blue); background: var(--bg4); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--text2); }
+
+  /* Input */
+  .mock-input { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--text2); font-size: 11px; width: 100%; resize: none; font-family: inherit; }
+
+  /* ── 1. TokenStatsBar ── */
+  .token-bar { border-bottom: 1px solid var(--border); }
+  .token-stats-row { display: flex; gap: 8px; padding: 6px 10px; }
+  .token-legend { display: flex; flex-direction: column; gap: 1px; font-size: 9px; color: var(--text3); white-space: nowrap; }
+  .butterfly { flex: 1; display: flex; gap: 1px; align-items: center; height: 28px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; min-width: 2px; }
+  .bar-in { background: #3b82f6; border-radius: 2px 2px 0 0; }
+  .bar-axis { height: 1px; background: var(--border); }
+  .bar-out { background: #a855f7; border-radius: 0 0 2px 2px; }
+  .ctx-row { display: flex; align-items: center; gap: 6px; padding: 3px 10px 5px; font-size: 9px; color: var(--text3); }
+  .ctx-track { flex: 1; height: 4px; background: var(--bg4); border-radius: 9px; overflow: hidden; }
+  .ctx-fill { height: 100%; border-radius: 9px; transition: width .3s; }
+
+  /* Tooltip simulation */
+  .has-tooltip { position: relative; cursor: help; }
+  .has-tooltip .tooltip { display: none; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--bg4); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 10px; white-space: nowrap; font-size: 10px; color: var(--text); z-index: 10; pointer-events: none; }
+  .has-tooltip:hover .tooltip { display: block; }
+
+  /* Collapsible stats */
+  .collapsed-bar { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 10px; cursor: pointer; }
+  .collapsed-bar .cost { color: var(--green); font-weight: 600; }
+  .collapsed-bar .ctx-mini { flex: 1; height: 4px; background: var(--bg4); border-radius: 9px; overflow: hidden; }
+  .collapsed-bar .ctx-mini-fill { height: 100%; background: var(--blue); border-radius: 9px; width: 62%; }
+  .expand-icon { color: var(--text3); font-size: 9px; }
+
+  /* Labeled stats bar */
+  .labeled-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px 10px; }
+  .stat-item { display: flex; flex-direction: column; gap: 1px; }
+  .stat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+  .stat-val { font-size: 11px; font-weight: 600; color: var(--text); }
+  .stat-val.cost { color: var(--green); }
+  .stat-val.warn { color: var(--yellow); }
+
+  /* ── 2. SessionHeader ── */
+  .session-hdr { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 11px; min-height: 34px; }
+  .session-name { font-weight: 600; color: var(--text); }
+  .session-name.clipped { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 120px; }
+  .session-model { color: var(--text2); white-space: nowrap; flex-shrink: 0; }
+  .session-model.wrap { white-space: normal; word-break: break-all; max-width: 100px; line-height: 1.2; }
+  .spacer { flex: 1; }
+  .action-row { display: flex; gap: 4px; flex-shrink: 0; }
+  .overflow-menu { position: relative; display: inline-block; }
+  .overflow-menu .menu { display: none; position: absolute; right: 0; top: calc(100% + 4px); background: var(--bg4); border: 1px solid var(--border); border-radius: 6px; padding: 4px; z-index: 10; white-space: nowrap; }
+  .overflow-menu:hover .menu { display: block; }
+  .menu-item { display: block; padding: 4px 10px; font-size: 10px; color: var(--text2); border-radius: 4px; }
+  .menu-item:hover { background: var(--bg3); color: var(--text); }
+  .two-line-hdr { padding: 4px 10px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .two-line-hdr .row1 { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+  .two-line-hdr .row2 { display: flex; align-items: center; gap: 6px; }
+  .two-line-hdr .model-chip { font-size: 10px; color: var(--text3); }
+
+  /* ── 3. ChatView tool output ── */
+  .chat-bubble { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 11px; }
+  .chat-bubble.tool { border-color: #2a2020; background: #1a1515; }
+  .raw-meta { font-family: monospace; font-size: 9px; color: var(--text3); line-height: 1.7; }
+  .img-placeholder { width: 100%; height: 60px; background: var(--bg4); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 10px; border: 1px dashed var(--border); margin: 4px 0; }
+  .collapsible-meta { font-size: 9px; color: var(--text3); }
+  .collapsible-meta summary { cursor: pointer; color: var(--blue); padding: 2px 0; }
+  .tool-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+  .tool-card-header { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--bg4); font-size: 10px; color: var(--text2); border-bottom: 1px solid var(--border); }
+  .tool-card-img { padding: 8px; }
+  .tool-card-meta-row { display: flex; gap: 8px; padding: 5px 8px; background: var(--bg3); border-top: 1px solid var(--border); font-size: 9px; color: var(--text3); flex-wrap: wrap; }
+  .tag-pill { background: var(--bg4); border: 1px solid var(--border); border-radius: 10px; padding: 1px 6px; font-size: 9px; }
+
+  /* ── 4. CommandInput send button ── */
+  .cmd-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg3); }
+  .cmd-inner { padding: 6px 8px; }
+  .cmd-footer { display: flex; align-items: center; justify-content: flex-end; padding: 4px 8px; border-top: 1px solid var(--border); gap: 4px; }
+  .send-btn { display: inline-flex; align-items: center; gap: 0; }
+  .send-main { padding: 5px 12px; background: var(--accent); border: 1px solid var(--accent); border-radius: 6px 0 0 6px; color: #fff; font-size: 11px; cursor: pointer; }
+  .send-chevron { padding: 5px 7px; background: var(--accent); border: 1px solid var(--accent); border-left-color: rgba(255,255,255,.2); border-radius: 0 6px 6px 0; color: #fff; font-size: 10px; cursor: pointer; }
+  .send-menu { position: relative; display: inline-block; }
+  .send-menu .s-menu { display: none; position: absolute; right: 0; bottom: calc(100% + 4px); background: var(--bg4); border: 1px solid var(--border); border-radius: 6px; padding: 4px; min-width: 160px; z-index: 10; }
+  .send-menu:hover .s-menu { display: block; }
+  .s-menu-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 10px; border-radius: 4px; cursor: pointer; color: var(--text2); }
+  .s-menu-item:hover { background: var(--bg3); color: var(--text); }
+  .kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; font-family: monospace; font-size: 9px; color: var(--text3); }
+  .hint-bar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 2px 8px 4px; font-size: 9px; color: var(--text3); }
+
+  /* ── 5. StatusBar ── */
+  .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-top: 1px solid var(--border); font-size: 10px; }
+  .sb-left { display: flex; align-items: center; gap: 6px; }
+  .sb-right { color: var(--text3); font-size: 10px; }
+  .model-chip-mock { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: var(--bg4); border: 1px solid var(--border); font-size: 10px; color: var(--text); cursor: pointer; }
+  .thinking-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: var(--bg4); border: 1px solid var(--border); font-size: 10px; color: var(--yellow); cursor: pointer; }
+  .pipe { width: 1px; height: 12px; background: var(--border2); }
+  .idle-indicator { display: flex; align-items: center; gap: 4px; color: var(--text3); font-size: 10px; }
+  .idle-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .health-bar { display: flex; align-items: center; gap: 6px; }
+  .health-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 10px; font-size: 9px; }
+  .health-chip.ok { background: #0d2014; border: 1px solid #1e4020; color: var(--green); }
+  .health-chip.warn { background: #2d2a1a; border: 1px solid #4a3e18; color: var(--yellow); }
+  .turn-counter { background: var(--bg4); border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px; font-size: 9px; color: var(--text3); display: flex; align-items: center; gap: 4px; }
+
+  /* ── 6. Drag Divider ── */
+  .layout-mock { display: flex; height: 80px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 10px; }
+  .layout-left { background: var(--bg2); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 10px; }
+  .layout-right { background: var(--bg3); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 10px; }
+  .divider { width: 4px; background: var(--border); cursor: col-resize; flex-shrink: 0; transition: background .15s; }
+  .divider:hover { background: var(--blue); }
+  .divider.warn-stop { background: var(--yellow); }
+  .divider.with-handle { position: relative; display: flex; align-items: center; justify-content: center; }
+  .divider.with-handle::after { content: "⋮"; color: var(--text3); font-size: 10px; }
+  .min-stop-label { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 8px; color: var(--yellow); white-space: nowrap; background: var(--bg2); padding: 0 2px; border-radius: 2px; }
+  .persist-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 10px; background: var(--bg4); border: 1px solid var(--border); font-size: 9px; color: var(--text2); margin-top: 4px; }
+
+  /* ── 7. Empty State ── */
+  .chat-area { border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); height: 100px; display: flex; overflow: hidden; position: relative; }
+  .empty-center { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; }
+  .empty-bottom { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; flex-direction: column; align-items: center; gap: 4px; }
+  .empty-text { font-size: 10px; color: var(--text3); }
+  .empty-sub { font-size: 9px; color: var(--text3); opacity: .6; }
+  .fade-in-demo { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; flex-direction: column; align-items: center; gap: 4px; }
+  .fade-in-demo .empty-text { animation: pulsefade 2s ease-in-out infinite; }
+  @keyframes pulsefade { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .timeout-retry { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .retry-btn { font-size: 9px; color: var(--blue); border: 1px solid var(--border); background: var(--bg3); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  .scroll-btn { position: absolute; bottom: 4px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text2); }
+  .scroll-btn.safe { bottom: 28px; }
+  .cmd-bar-mock { position: absolute; bottom: 0; left: 0; right: 0; height: 22px; background: var(--bg3); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 6px; font-size: 9px; color: var(--text3); }
+
+  /* Mini butterfly bars helper */
+  .bf-bars { display: flex; gap: 1px; height: 26px; align-items: center; flex: 1; }
+  .bf-col { flex: 1; min-width: 2px; display: flex; flex-direction: column; height: 100%; }
+  .bf-top { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 1px; }
+  .bf-bot { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 1px; }
+
+  /* Responsive: collapse to 2-col on small screens */
+  @media (max-width: 900px) {
+    .compare-grid { grid-template-columns: 1fr 1fr; }
+    section { padding: 24px 20px; }
+    .toc { padding: 16px 20px; }
+    header { padding: 24px 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PI Dashboard — UI Improvement Mockups</h1>
+  <p>Before / after comparisons · 3 design options per issue · Interactive previews</p>
+</header>
+
+<nav class="toc">
+  <a href="#s1">#1 TokenStatsBar</a>
+  <a href="#s2">#2 SessionHeader</a>
+  <a href="#s3">#3 Tool Output</a>
+  <a href="#s4">#4 Send Button</a>
+  <a href="#s5">#5 StatusBar Idle</a>
+  <a href="#s6">#6 Drag Divider</a>
+  <a href="#s7">#7 Empty State</a>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     #1 — TokenStatsBar
+══════════════════════════════════════════ -->
+<section id="s1">
+  <div class="section-title">
+    <h2>#1 TokenStatsBar — Info Density vs. Cognitive Load</h2>
+    <span class="badge medium">Medium</span>
+  </div>
+  <code class="file-ref">TokenStatsBar.tsx:54–75</code>
+  <p class="section-desc">
+    Dense 9px text with cryptic abbreviations (↓241.3k, R34.5M, W827.4k), no labels, no axis labels on butterfly chart, no clear warning threshold on context bar. User cannot tell at a glance how expensive the session is or how much context remains.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current)</div>
+      <div class="card-body">
+        <div class="mock token-bar">
+          <div class="token-stats-row">
+            <div class="token-legend">
+              <div><span style="color:#3b82f6">●</span> ↓241.3k</div>
+              <div><span style="color:#a855f7">●</span> ↑34.1k</div>
+              <div style="display:flex;gap:6px"><span>↓241.3k</span><span>↑34.1k</span></div>
+              <div style="display:flex;gap:6px"><span>R34.5M</span><span>W827.4k</span><span>$16.67</span></div>
+            </div>
+            <div class="bf-bars">
+              <div class="bf-col"><div class="bf-top"><div style="height:40%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:60%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:80%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:50%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:100%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:90%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:60%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:40%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:70%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:80%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+            </div>
+          </div>
+          <div class="ctx-row">
+            <span>241.3k</span>
+            <div class="ctx-track"><div class="ctx-fill" style="width:62%;background:#3b82f6"></div></div>
+            <span>200k</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">❌ R/W/↓/↑ meaning unknown · no warning at 75% · no labels on butterfly · 9px text barely readable</div>
+    </div>
+
+    <!-- OPTION A: Hover tooltips per stat -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — Hover Tooltips</div>
+      <div class="card-body">
+        <div class="mock token-bar">
+          <div class="token-stats-row">
+            <div class="token-legend">
+              <div class="has-tooltip"><span style="color:#3b82f6">●</span> ↓241k<span class="tooltip">Max input per turn: 241.3k tokens</span></div>
+              <div class="has-tooltip"><span style="color:#a855f7">●</span> ↑34.1k<span class="tooltip">Max output per turn: 34.1k tokens</span></div>
+              <div style="display:flex;gap:6px">
+                <span class="has-tooltip">↓241k<span class="tooltip">Total tokens in: 241.3k</span></span>
+                <span class="has-tooltip">↑34.1k<span class="tooltip">Total tokens out: 34.1k</span></span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <span class="has-tooltip" style="color:#6366f1">R34M<span class="tooltip">Cache read: 34.5M tokens</span></span>
+                <span class="has-tooltip" style="color:#8b5cf6">W827k<span class="tooltip">Cache write: 827.4k tokens</span></span>
+                <span class="has-tooltip" style="color:#3fb950">$16.67<span class="tooltip">Session cost: $16.67</span></span>
+              </div>
+            </div>
+            <div class="bf-bars">
+              <div class="bf-col"><div class="bf-top"><div style="height:40%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:60%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:80%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:50%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:100%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:90%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:60%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:40%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              <div class="bf-col"><div class="bf-top"><div style="height:70%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:80%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+            </div>
+          </div>
+          <div class="ctx-row">
+            <span style="color:#d29922">⚠ 62%</span>
+            <div class="ctx-track"><div class="ctx-fill" style="width:62%;background:#d29922"></div></div>
+            <span>200k</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Hover any abbreviation for full label · ⚠ icon + yellow at 62% · zero layout change · same footprint</div>
+    </div>
+
+    <!-- OPTION B: Collapsible (default collapsed) -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — Collapsible (default collapsed)</div>
+      <div class="card-body">
+        <div class="mock token-bar">
+          <div class="collapsed-bar" style="cursor:pointer">
+            <span style="color:#3fb950;font-weight:600;font-size:10px">$16.67</span>
+            <span style="font-size:9px;color:var(--text3)">62% ctx</span>
+            <div class="ctx-mini"><div class="ctx-mini-fill" style="background:#d29922"></div></div>
+            <span style="font-size:9px;color:var(--text3)">⚠</span>
+            <span class="expand-icon">▾ details</span>
+          </div>
+          <!-- expanded panel (shown as "hover state") -->
+          <div style="border-top:1px solid var(--border);padding:6px 10px">
+            <div class="token-stats-row" style="padding:0">
+              <div class="token-legend">
+                <div><span style="color:#3b82f6">●</span> ↓241k</div>
+                <div><span style="color:#a855f7">●</span> ↑34.1k</div>
+                <div style="display:flex;gap:6px"><span>R34M</span><span>W827k</span></div>
+              </div>
+              <div class="bf-bars">
+                <div class="bf-col"><div class="bf-top"><div style="height:40%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:60%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+                <div class="bf-col"><div class="bf-top"><div style="height:80%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:50%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+                <div class="bf-col"><div class="bf-top"><div style="height:100%;background:#3b82f6;border-radius:2px 2px 0 0"></div></div><div style="height:1px;background:var(--border)"></div><div class="bf-bot"><div style="height:90%;background:#a855f7;border-radius:0 0 2px 2px"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Default view: cost + context bar only (saves 40px height) · click ▾ to expand butterfly · best for narrow panels</div>
+    </div>
+
+    <!-- OPTION C: Always-labeled grid -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Labeled 2×2 Grid</div>
+      <div class="card-body">
+        <div class="mock token-bar" style="padding:6px 10px">
+          <div class="labeled-stats">
+            <div class="stat-item">
+              <span class="stat-label">Cache Read</span>
+              <span class="stat-val">34.5M</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Cache Write</span>
+              <span class="stat-val">827k</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Context Used</span>
+              <span class="stat-val warn">62% ⚠</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Session Cost</span>
+              <span class="stat-val cost">$16.67</span>
+            </div>
+          </div>
+          <div class="ctx-row" style="padding:0 0 4px">
+            <div class="ctx-track"><div class="ctx-fill" style="width:62%;background:#d29922"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ No abbreviations · full English labels · color-coded warnings · drops butterfly (trade: less turn-by-turn detail)</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     #2 — SessionHeader
+══════════════════════════════════════════ -->
+<section id="s2">
+  <div class="section-title">
+    <h2>#2 SessionHeader — Overflow at Narrow Widths</h2>
+    <span class="badge high">High</span>
+  </div>
+  <code class="file-ref">SessionHeader.tsx:355–430</code>
+  <p class="section-desc">
+    At ~508px right-panel width, session name, model, thinking level, attach pill, Changed Files button, and fork/resume pills all share one flex row with no overflow protection. Long session names push model text off-screen.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="session-hdr" style="background:var(--bg2)">
+            <span class="session-name">anthropic-claude-messages-integration-test-session-long-name</span>
+            <span class="session-model wrap">anthropic/<wbr>claude-<wbr>sonnet-4-6</span>
+            <span class="spacer"></span>
+            <div class="action-row">
+              <span class="pill blue">📎 spec</span>
+              <span class="pill">🔀 Files</span>
+              <span class="pill green">Fork</span>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#f85149;padding:4px 10px">↑ session name overflows, model wraps, buttons squeeze</div>
+        </div>
+      </div>
+      <div class="card-note">❌ No min-w-0 on session name · model text wraps · all 6 action buttons always visible regardless of width</div>
+    </div>
+
+    <!-- OPTION A: min-w-0 truncate (one-line fix) -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — min-w-0 truncate (1-line fix)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="session-hdr" style="background:var(--bg2)">
+            <span class="session-name clipped" title="anthropic-claude-messages-integration-test-session-long-name">anthropic-claude-messages-integration-test-session-long-name</span>
+            <span class="session-model" style="flex-shrink:0">claude-sonnet-4-6</span>
+            <span class="spacer"></span>
+            <div class="action-row">
+              <span class="pill blue">📎 spec</span>
+              <span class="pill">🔀 Files</span>
+              <span class="pill green">Fork</span>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#3fb950;padding:4px 10px">↑ name ellipsizes, model stays on one line</div>
+        </div>
+      </div>
+      <div class="card-note">✅ Add <code>min-w-0 truncate max-w-[160px]</code> to name span · model no longer wraps · zero other changes · lowest risk</div>
+    </div>
+
+    <!-- OPTION B: Overflow ⋯ menu -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — ⋯ Overflow Menu</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="session-hdr" style="background:var(--bg2)">
+            <span class="session-name clipped" title="long session name">long session name…</span>
+            <span class="session-model" style="flex-shrink:0">sonnet-4-6</span>
+            <span class="spacer"></span>
+            <div class="overflow-menu">
+              <button class="btn" style="padding:3px 7px;font-size:10px">⋯</button>
+              <div class="menu">
+                <div class="menu-item">📎 Attach spec</div>
+                <div class="menu-item">🔀 Changed Files</div>
+                <div class="menu-item">🔀 Fork session</div>
+                <div class="menu-item">▶ Resume</div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--blue);padding:4px 10px">↑ hover ⋯ to see actions (simulated)</div>
+        </div>
+      </div>
+      <div class="card-note">✅ Only ⋯ button pinned when panel &lt; 400px · all actions in menu · clean header at any width · hover to preview above</div>
+    </div>
+
+    <!-- OPTION C: Two-line header -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Two-Line Header</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="two-line-hdr" style="background:var(--bg2)">
+            <div class="row1">
+              <span class="session-name clipped" title="long name">anthropic-claude-messages…</span>
+              <span class="spacer"></span>
+              <span class="pill blue" style="font-size:9px">📎 spec</span>
+            </div>
+            <div class="row2">
+              <span class="model-chip" style="font-size:10px">🤖 claude-sonnet-4-6</span>
+              <span class="model-chip">💭 medium</span>
+              <span class="spacer"></span>
+              <span class="pill">🔀 Files</span>
+              <span class="pill green">Fork</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Row 1: session name + openspec · Row 2: model + thinking + actions · each row has breathing room · adds ~8px height</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     #3 — Raw Tool Output Around Images
+══════════════════════════════════════════ -->
+<section id="s3">
+  <div class="section-title">
+    <h2>#3 ChatView — Raw Tool Output Around Inline Images</h2>
+    <span class="badge high">High</span>
+  </div>
+  <code class="file-ref">ChatView.tsx:325–340 · SkillInvocationCard.tsx</code>
+  <p class="section-desc">
+    When <code>agent_browser</code> saves a screenshot, the tool result renders ~10 lines of raw metadata (Artifact type, Requested path, Absolute path, Exists, Size, Media type, Status, Session, CWD…) inline before/after the image. The image renders correctly but the surrounding text is noise.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-bubble tool">
+            <div class="raw-meta">
+Saved image: /tmp/dashboard-full.png<br>
+Artifact type: image<br>
+Requested path: /tmp/dashboard-full.png<br>
+Absolute path: /tmp/dashboard-full.png<br>
+Exists: true<br>
+Size: 52.5 KiB
+            </div>
+            <div class="img-placeholder">🖼 dashboard-full.png</div>
+            <div class="raw-meta">
+Media type: image/png<br>
+Status: saved<br>
+Session: piab-pi-agent-dashboard-019ef8…<br>
+CWD: /mnt/custom-file-systems/…
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">❌ ~10 lines of raw metadata wrap around image · session ID, CWD, media type all noise to the user</div>
+    </div>
+
+    <!-- OPTION A: Suppress + collapsible raw -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — Suppress + "Show raw" toggle</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-bubble tool">
+            <div class="img-placeholder">🖼 dashboard-full.png &nbsp; 52.5 KiB</div>
+            <details class="collapsible-meta" style="margin-top:4px">
+              <summary>Show raw output</summary>
+              <div class="raw-meta" style="margin-top:4px">
+Artifact type: image · Exists: true · Media type: image/png · Status: saved
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Regex heuristic collapses metadata if result matches /(Artifact type|Requested path|Status:)/ · image front-and-center · raw accessible via &lt;details&gt;</div>
+    </div>
+
+    <!-- OPTION B: Dedicated tool card renderer -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — Dedicated Image Tool Card</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="tool-card">
+            <div class="tool-card-header">
+              <span>🌐 agent_browser</span>
+              <span style="color:var(--green)">✓ screenshot saved</span>
+            </div>
+            <div class="tool-card-img">
+              <div class="img-placeholder" style="height:45px">🖼 dashboard-full.png</div>
+            </div>
+            <div class="tool-card-meta-row">
+              <span class="tag-pill">52.5 KiB</span>
+              <span class="tag-pill">image/png</span>
+              <span class="tag-pill">/tmp/dashboard-full.png</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Custom renderer in tool-renderers/ detects artifact_type:image · clean card, metadata as compact tags · no regex heuristic needed</div>
+    </div>
+
+    <!-- OPTION C: Inline thumbnail + filename only -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Inline Thumbnail + Filename</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-bubble tool" style="display:flex;gap:8px;align-items:center">
+            <div class="img-placeholder" style="width:60px;height:42px;flex-shrink:0;font-size:9px">🖼</div>
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text)">dashboard-full.png</div>
+              <div style="font-size:9px;color:var(--text3)">52.5 KiB · PNG · /tmp/</div>
+              <div style="font-size:9px;color:var(--blue);cursor:pointer;margin-top:2px">View full ↗</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Most compact — thumbnail + name + size/path on 2 lines · "View full" expands · great for narrow chat panel</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     #4 — CommandInput Send Button
+══════════════════════════════════════════ -->
+<section id="s4">
+  <div class="section-title">
+    <h2>#4 CommandInput — No Steer vs. Follow-up Delivery Selector</h2>
+    <span class="badge medium">Medium</span>
+  </div>
+  <code class="file-ref">CommandInput.tsx:466–480</code>
+  <p class="section-desc">
+    The send button always calls <code>handleSend("steer")</code>, treating every message as a mid-turn interrupt. The <code>"followUp"</code> mode exists in the type system but has no UI. Users can't intentionally queue a message to run after the agent finishes.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="cmd-wrap">
+            <div class="cmd-inner">
+              <textarea class="mock-input" rows="2" placeholder="Message agent..."></textarea>
+            </div>
+            <div class="cmd-footer">
+              <button class="btn primary">Send ↵</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">❌ Always steers — every message is an interrupt · no way to queue for after agent finishes · follow-up mode inaccessible</div>
+    </div>
+
+    <!-- OPTION A: Split button (GitHub merge style) -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — Split Button (▾ dropdown)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="cmd-wrap">
+            <div class="cmd-inner">
+              <textarea class="mock-input" rows="2" placeholder="Message agent..."></textarea>
+            </div>
+            <div class="cmd-footer">
+              <div class="send-menu">
+                <div class="send-btn">
+                  <div class="send-main">Send (steer)</div>
+                  <div class="send-chevron">▾</div>
+                </div>
+                <div class="s-menu">
+                  <div class="s-menu-item">⚡ Send now — steer <span class="kbd">↵</span></div>
+                  <div class="s-menu-item">📥 Queue for after — follow-up <span class="kbd">⇧↵</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--blue);padding:4px 8px">↑ hover ▾ to preview dropdown</div>
+        </div>
+      </div>
+      <div class="card-note">✅ Hover ▾ to see · mirrors GitHub PR merge button pattern · low discoverability cost · Shift+Enter shortcut shown inline</div>
+    </div>
+
+    <!-- OPTION B: Keyboard modifier hint -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — Keyboard Modifier Hint</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="cmd-wrap">
+            <div class="cmd-inner">
+              <textarea class="mock-input" rows="2" placeholder="Message agent..."></textarea>
+            </div>
+            <div class="hint-bar">
+              <span><span class="kbd">↵</span> steer</span>
+              <span><span class="kbd">⇧↵</span> queue follow-up</span>
+            </div>
+            <div class="cmd-footer">
+              <button class="btn primary">Send ↵</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Persistent hint strip shows both modes · no UI change to the button itself · keyboard-first · hint fades when agent is idle (steer=followUp then)</div>
+    </div>
+
+    <!-- OPTION C: Mode toggle pill -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Mode Toggle Pill</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="cmd-wrap">
+            <div class="cmd-inner">
+              <textarea class="mock-input" rows="2" placeholder="Message agent..."></textarea>
+            </div>
+            <div class="cmd-footer" style="justify-content:space-between">
+              <div style="display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px">
+                <button class="btn primary" style="border-radius:4px;font-size:10px;padding:3px 8px">⚡ Steer</button>
+                <button class="btn ghost" style="font-size:10px;padding:3px 8px">📥 Queue</button>
+              </div>
+              <button class="btn primary">Send ↵</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Explicit toggle left of send · selected mode highlighted · very discoverable · suitable if users switch often · adds ~6px height</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     #5 — StatusBar Idle State
+══════════════════════════════════════════ -->
+<section id="s5">
+  <div class="section-title">
+    <h2>#5 StatusBar — Idle Right Side Feels Disconnected</h2>
+    <span class="badge low">Low</span>
+  </div>
+  <code class="file-ref">StatusBar.tsx:85–110 · App.tsx:1467</code>
+  <p class="section-desc">
+    When idle, the right side of the status bar is empty — <code>justify-between</code> creates an unbalanced layout. The "Enable jj workspaces" button looks orphaned. The <code>|</code> separator can disappear at small sizes.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current — idle)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="status-bar" style="background:var(--bg2)">
+            <div class="sb-left">
+              <div class="model-chip-mock">claude-sonnet-4-6 ▾</div>
+              <div class="thinking-chip">💭 medium ▾</div>
+              <div class="pipe"></div>
+              <span class="pill" style="font-size:9px">OPENSPEC</span>
+              <span class="pill" style="font-size:9px">🌿 jj</span>
+              <button class="btn" style="font-size:9px;padding:2px 6px">Enable jj workspaces</button>
+            </div>
+            <div class="sb-right"><!-- empty when idle --></div>
+          </div>
+          <div style="font-size:9px;color:#f85149;padding:3px 8px">↑ right side empty · "Enable jj workspaces" orphaned · pipe invisible at small sizes</div>
+        </div>
+      </div>
+      <div class="card-note">❌ Empty right side creates asymmetry · "Enable jj workspaces" lacks visual context · h-3 w-px pipe disappears at high DPI</div>
+    </div>
+
+    <!-- OPTION A: Last-run indicator -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — Last-Run Indicator</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="status-bar" style="background:var(--bg2)">
+            <div class="sb-left">
+              <div class="model-chip-mock">claude-sonnet-4-6 ▾</div>
+              <div class="thinking-chip">💭 medium ▾</div>
+              <span style="display:inline-block;width:1px;height:12px;background:var(--border2);margin:0 4px"></span>
+              <span class="pill" style="font-size:9px">OPENSPEC</span>
+              <span class="pill" style="font-size:9px">🌿 jj</span>
+            </div>
+            <div class="idle-indicator">
+              <div class="idle-dot"></div>
+              <span>Idle · last turn 5h 47m ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Repurposes empty right side · duration from session.startedAt already computed in SessionHeader · green dot signals healthy idle</div>
+    </div>
+
+    <!-- OPTION B: Mini health summary -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — Mini Health Summary</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="status-bar" style="background:var(--bg2)">
+            <div class="sb-left">
+              <div class="model-chip-mock">claude-sonnet-4-6 ▾</div>
+              <div class="thinking-chip">💭 medium</div>
+              <span style="display:inline-block;width:1px;height:12px;background:var(--border2);margin:0 4px"></span>
+              <span class="pill" style="font-size:9px">OPENSPEC</span>
+            </div>
+            <div class="health-bar">
+              <span class="health-chip ok">✓ ws</span>
+              <span class="health-chip ok">✓ ext</span>
+              <span class="health-chip warn">⚠ 62% ctx</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Right side shows ws/extension health + context warning · always actionable · pairs with debug-dashboard skill triggers</div>
+    </div>
+
+    <!-- OPTION C: Turn counter chip -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Turn Counter + Cost Chip</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="status-bar" style="background:var(--bg2)">
+            <div class="sb-left">
+              <div class="model-chip-mock">claude-sonnet-4-6 ▾</div>
+              <div class="thinking-chip">💭 medium</div>
+              <span style="display:inline-block;width:1px;height:12px;background:var(--border2);margin:0 4px"></span>
+              <span class="pill" style="font-size:9px">OPENSPEC</span>
+            </div>
+            <div class="turn-counter">
+              <span>23 turns</span>
+              <span style="color:var(--border2)">·</span>
+              <span style="color:var(--green)">$16.67</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Turn count + cost always visible without opening stats bar · compact single chip · mirrors common IDE "line:col" status idiom</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     #6 — Drag Divider
+══════════════════════════════════════════ -->
+<section id="s6">
+  <div class="section-title">
+    <h2>#6 Layout — Drag Divider Has No Min-Width / Persistence</h2>
+    <span class="badge medium">Medium</span>
+  </div>
+  <code class="file-ref">App.tsx (near .w-1.cursor-col-resize)</code>
+  <p class="section-desc">
+    The resizable pane divider can be dragged to 0px on either side. No minimum width enforcement, no visual stop indicator, and no localStorage persistence — position resets to default on every reload.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="layout-mock">
+            <div class="layout-left" style="width:30%">Sidebar</div>
+            <div class="divider" title="drag me"></div>
+            <div class="layout-right" style="flex:1">Chat</div>
+          </div>
+          <div style="font-size:9px;color:#f85149;padding:4px 6px">↑ divider can drag to 0px · resets on reload · no stop indicator</div>
+        </div>
+      </div>
+      <div class="card-note">❌ No min/max clamp · no localStorage · no visual feedback near limits · right panel at 508px already causes header overflow (see #2)</div>
+    </div>
+
+    <!-- OPTION A: Clamped + persisted + blue glow near limit -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — Clamped + Persisted + Glow</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="layout-mock">
+            <div class="layout-left" style="width:25%;min-width:25%">Sidebar <span style="font-size:8px;color:var(--text3)">(min 200px)</span></div>
+            <div class="divider with-handle" style="background:var(--blue)"></div>
+            <div class="layout-right" style="flex:1">Chat</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 6px">
+            <span class="persist-badge">💾 saved to localStorage</span>
+            <span style="font-size:9px;color:var(--text3)">divider glows blue near limit</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Clamp: leftWidth ∈ [200, vw-350] · save on mouseup to <code>pi-panel-divider-x</code> · blue glow when within 20px of limit · handle ⋮ visible</div>
+    </div>
+
+    <!-- OPTION B: Double-click reset + visual stop -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — Double-click Reset + Stop Stripe</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="layout-mock">
+            <div class="layout-left" style="width:15%;min-width:15%;position:relative">
+              <span style="font-size:8px;color:var(--text3)">Near min</span>
+            </div>
+            <div class="divider warn-stop with-handle" title="Double-click to reset 50/50" style="position:relative">
+              <div class="min-stop-label">min</div>
+            </div>
+            <div class="layout-right" style="flex:1">Chat</div>
+          </div>
+          <div style="font-size:9px;color:var(--text3);padding:4px 6px">↑ yellow = near limit · double-click divider = reset 50/50</div>
+        </div>
+      </div>
+      <div class="card-note">✅ Yellow stripe + "min" label appear within 30px of limit · double-click resets to <code>vw/2</code> · most discoverable affordance</div>
+    </div>
+
+    <!-- OPTION C: Preset snap buttons -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Preset Snap Buttons</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="layout-mock" style="position:relative">
+            <div class="layout-left" style="width:35%">Sidebar</div>
+            <div class="divider with-handle"></div>
+            <div class="layout-right" style="flex:1">Chat</div>
+            <div style="position:absolute;top:4px;right:6px;display:flex;gap:2px">
+              <button class="btn" style="font-size:8px;padding:2px 5px">30/70</button>
+              <button class="btn primary" style="font-size:8px;padding:2px 5px">50/50</button>
+              <button class="btn" style="font-size:8px;padding:2px 5px">70/30</button>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--text3);padding:4px 6px">snap buttons in header toolbar (or divider hover)</div>
+        </div>
+      </div>
+      <div class="card-note">✅ 3 preset ratios always accessible · no drag precision needed · saved per-preset to localStorage · easy to discover for non-draggers</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     #7 — Empty / Loading State
+══════════════════════════════════════════ -->
+<section id="s7">
+  <div class="section-title">
+    <h2>#7 ChatView — Empty State Jumps + No Loading Timeout</h2>
+    <span class="badge medium">Medium</span>
+  </div>
+  <code class="file-ref">ChatView.tsx:598–612</code>
+  <p class="section-desc">
+    "No messages yet" and "Loading conversation…" are vertically centered in the chat area with <code>flex items-center justify-center h-full</code>. On first message, content starts from the top — causing a jarring center→top jump. The loading spinner has no timeout, so a silent failure shows the spinner forever. The scroll-to-bottom button also overlaps the CommandInput.
+  </p>
+  <div class="compare-grid">
+
+    <!-- BEFORE -->
+    <div class="compare-card before">
+      <div class="card-label">Before (current)</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-area">
+            <div class="empty-center">
+              <div class="spinner"></div>
+              <div class="empty-text">Loading conversation…</div>
+            </div>
+            <div class="scroll-btn">↓</div>
+            <div class="cmd-bar-mock">Type a message...</div>
+          </div>
+          <div style="font-size:9px;color:#f85149;padding:3px 6px">↑ centered → jumps to top on msg · spinner overlaps scroll btn · no timeout</div>
+        </div>
+      </div>
+      <div class="card-note">❌ Center-aligned empty state jumps to top-aligned on first message · scroll btn at bottom-4 overlaps CommandInput · no 10s timeout fallback</div>
+    </div>
+
+    <!-- OPTION A: Bottom-aligned empty -->
+    <div class="compare-card option-a">
+      <div class="card-label">Option A — Bottom-Aligned Empty State</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-area">
+            <div class="empty-bottom">
+              <div class="empty-text">No messages yet</div>
+              <div class="empty-sub">Type below to start</div>
+            </div>
+            <div class="scroll-btn safe">↓</div>
+            <div class="cmd-bar-mock">Type a message...</div>
+          </div>
+          <div style="font-size:9px;color:#3fb950;padding:3px 6px">↑ empty state at bottom = no jump · scroll btn raised above cmd bar</div>
+        </div>
+      </div>
+      <div class="card-note">✅ <code>justify-end pb-8</code> → aligns with where first message appears · eliminates layout jump · scroll btn at bottom-16 clears CommandInput</div>
+    </div>
+
+    <!-- OPTION B: Fade-in transition + timeout -->
+    <div class="compare-card option-b">
+      <div class="card-label">Option B — Fade-in + Timeout Retry</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-area">
+            <div class="empty-bottom">
+              <div class="timeout-retry">
+                <div class="fade-in-demo">
+                  <div class="empty-text">Loading conversation…</div>
+                </div>
+                <div class="retry-btn">Retry ↺</div>
+                <div class="empty-sub" style="font-size:8px">Took too long? Tap to retry</div>
+              </div>
+            </div>
+            <div class="cmd-bar-mock">Type a message...</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Bottom-aligned · pulse animation on "Loading…" · after 10s: sets loadingHistory=false + shows Retry button · message text fades out gracefully on first message via CSS transition</div>
+    </div>
+
+    <!-- OPTION C: Skeleton messages -->
+    <div class="compare-card option-c">
+      <div class="card-label">Option C — Skeleton Message Placeholders</div>
+      <div class="card-body">
+        <div class="mock">
+          <div class="chat-area" style="padding:8px;flex-direction:column;justify-content:flex-end">
+            <div style="height:10px;background:var(--bg4);border-radius:4px;width:60%;margin-bottom:4px;animation:pulsefade 1.5s infinite"></div>
+            <div style="height:10px;background:var(--bg4);border-radius:4px;width:80%;margin-bottom:4px;animation:pulsefade 1.5s infinite .2s"></div>
+            <div style="height:10px;background:var(--bg4);border-radius:4px;width:50%;margin-bottom:4px;animation:pulsefade 1.5s infinite .4s"></div>
+            <div class="cmd-bar-mock" style="position:relative;margin:-8px -8px 0;border-radius:0">Type a message...</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-note">✅ Skeleton lines bottom-anchored → content "grows up" from placeholders naturally when real messages load · zero perceived jump · standard loading UX pattern</div>
+    </div>
+
+  </div>
+</section>
+
+</body>
+</html>
