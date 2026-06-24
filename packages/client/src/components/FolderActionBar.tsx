@@ -1,6 +1,7 @@
 /**
  * Unified action bar for folder groups in the sidebar.
  * Buttons: Terminals(N) | Editor | Zed | Clean up broken | Pi Resources
+ * See change: sidebar-compact-combo-pill.
  */
 import React from "react";
 import { Icon } from "@mdi/react";
@@ -10,11 +11,11 @@ import {
   mdiToyBrickOutline,
   mdiOpenInNew,
   mdiAlertCircleOutline,
-  mdiCircleSmall,
   mdiBroom,
 } from "@mdi/js";
 import { Confirm } from "@blackbelt-technology/pi-dashboard-client-utils/Confirm";
 import { WorktreeInitButton } from "./WorktreeInitButton.js";
+import { ComboPill } from "./ComboPill.js";
 import type { DetectedEditor } from "../lib/editor-api.js";
 import type { EditorInstanceStatus } from "@blackbelt-technology/pi-dashboard-shared/editor-types.js";
 import { t as i18nT } from "../lib/i18n";
@@ -39,8 +40,8 @@ interface Props {
   onOpenPiResources: () => void;
 }
 
-// Icon map for native editors
-const editorIcons: Record<string, string> = {
+// Keycap map for native editors
+const editorKeycaps: Record<string, string> = {
   zed: "Z",
 };
 
@@ -67,77 +68,66 @@ export function FolderActionBar({
       {/* Initialize (shown iff this checkout declares a hook + gate says needsInit) */}
       <WorktreeInitButton cwd={cwd} />
 
-      {/* Terminals(N) */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onOpenTerminals(); }}
-        className="text-[10px] px-1.5 py-0.5 rounded border text-cyan-400 border-cyan-500/40 bg-cyan-500/5 hover:text-cyan-300 hover:border-cyan-500/70"
+      {/* [T] Terminals(N) */}
+      <ComboPill
+        keycap="T"
+        icon={mdiConsoleLine}
+        label={terminalCount}
+        variant="terminal"
         title={i18nT("auto.open_terminals_view", undefined, "Open terminals view")}
-      >
-        <span className="inline-flex items-center gap-0.5">
-          <Icon path={mdiConsoleLine} size={0.5} />
-          {i18nT("auto.terminals", undefined, "Terminals(")}{terminalCount})
-        </span>
-      </button>
+        onClick={(e) => { e.stopPropagation(); onOpenTerminals(); }}
+      />
 
-      {/* Editor */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onOpenEditor(); }}
-        className={`text-[10px] px-1.5 py-0.5 rounded border ${
-          editorStatus?.status === "ready"
-            ? "border-green-500/50 text-green-400 bg-green-500/5"
+      {/* [E] Editor — status dot shows running/starting/missing state */}
+      <ComboPill
+        keycap="E"
+        icon={mdiCodeBraces}
+        label={
+          editorAvailable === false ? (
+            <Icon path={mdiAlertCircleOutline} size={0.38} className="text-yellow-400" />
+          ) : editorStatus?.status === "ready" ? (
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+          ) : editorStatus?.status === "starting" ? (
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
+          ) : undefined
+        }
+        variant="editor"
+        title={
+          editorAvailable === false
+            ? "code-server not found — click to see install guide"
+            : editorStatus?.status === "ready"
+            ? "Editor running — click to open"
             : editorStatus?.status === "starting"
-            ? "border-blue-500/50 text-blue-400 bg-blue-500/5"
-            : editorAvailable === false
-            ? "border-yellow-500/50 text-[var(--text-secondary)]"
-            : "text-blue-400 border-blue-500/40 bg-blue-500/5 hover:text-blue-300 hover:border-blue-500/70"
-        }`}
-        title={editorAvailable === false ? "code-server not found — click to see install guide" : editorStatus?.status === "ready" ? "Editor running — click to open" : editorStatus?.status === "starting" ? "Editor starting..." : "Open VS Code editor"}
-      >
-        <span className="inline-flex items-center gap-0.5">
-          <Icon path={mdiCodeBraces} size={0.5} />
-          {i18nT("auto.editor", undefined, "Editor")}
-          {editorAvailable === false && (
-            <Icon path={mdiAlertCircleOutline} size={0.4} className="text-yellow-400" />
-          )}
-          {editorStatus?.status === "ready" && (
-            <Icon path={mdiCircleSmall} size={0.6} className="text-green-500" />
-          )}
-          {editorStatus?.status === "starting" && (
-            <Icon path={mdiCircleSmall} size={0.6} className="text-blue-400 animate-pulse" />
-          )}
-        </span>
-      </button>
+            ? "Editor starting..."
+            : i18nT("auto.open_vs_code_editor", undefined, "Open VS Code editor")
+        }
+        onClick={(e) => { e.stopPropagation(); onOpenEditor(); }}
+      />
 
       {/* Native editors (e.g., Zed) — filtered to exclude vscode */}
       {filteredNativeEditors.map((editor) => (
-        <button
+        <ComboPill
           key={editor.id}
-          onClick={(e) => { e.stopPropagation(); onOpenNativeEditor(editor.id); }}
-          className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-blue-400 hover:border-blue-500/50"
+          keycap={editorKeycaps[editor.id] ?? editor.name[0].toUpperCase()}
+          icon={mdiOpenInNew}
+          label={editor.name}
+          variant="neutral"
           title={`Open in ${editor.name}`}
-        >
-          <span className="inline-flex items-center gap-0.5">
-            {editorIcons[editor.id] ? (
-              <span className="text-[10px] font-bold">{editorIcons[editor.id]}</span>
-            ) : (
-              <Icon path={mdiOpenInNew} size={0.5} />
-            )}
-            {editor.name}
-          </span>
-        </button>
+          onClick={(e) => { e.stopPropagation(); onOpenNativeEditor(editor.id); }}
+        />
       ))}
 
+      {/* [!] Clean up broken sessions */}
       {showCleanUp && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setConfirmCleanUpOpen(true); }}
-          data-testid="folder-cleanup-broken-btn"
-          className="text-[10px] px-1.5 py-0.5 rounded border border-red-500/40 text-red-300 hover:bg-red-500/10"
+        <ComboPill
+          keycap="!"
+          icon={mdiBroom}
+          label={brokenSessionCount}
+          variant="danger"
           title={`Hide ${brokenSessionCount} session${brokenSessionCount === 1 ? "" : "s"} whose cwd no longer exists`}
-        >
-          <span className="inline-flex items-center gap-0.5">
-            <Icon path={mdiBroom} size={0.5} /> {i18nT("auto.clean_up_broken", undefined, "Clean up broken (")}{brokenSessionCount})
-          </span>
-        </button>
+          onClick={(e) => { e.stopPropagation(); setConfirmCleanUpOpen(true); }}
+          testId="folder-cleanup-broken-btn"
+        />
       )}
       {confirmCleanUpOpen && (
         <Confirm
@@ -151,14 +141,15 @@ export function FolderActionBar({
         />
       )}
 
-      {/* Pi Resources — right-aligned */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onOpenPiResources(); }}
-        className="ml-auto text-[10px] px-1.5 py-0.5 rounded border border-[var(--border-secondary)] text-[var(--text-muted)] hover:text-purple-400 hover:border-purple-500/50"
+      {/* [π] Pi Resources — right-aligned */}
+      <ComboPill
+        keycap="π"
+        icon={mdiToyBrickOutline}
+        variant="pi"
         title={i18nT("auto.pi_resources", undefined, "Pi Resources")}
-      >
-        <Icon path={mdiToyBrickOutline} size={0.5} />
-      </button>
+        onClick={(e) => { e.stopPropagation(); onOpenPiResources(); }}
+        className="ml-auto"
+      />
     </div>
   );
 }

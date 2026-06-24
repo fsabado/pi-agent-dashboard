@@ -78,7 +78,7 @@ export function ActivityIndicator({ session }: { session: DashboardSession }) {
   }
 
   if (session.status === "idle" || session.status === "active") {
-    return <span className="text-[var(--text-tertiary)]">{i18nT("auto.waiting_for_input", undefined, "Waiting for input")}</span>;
+    return <span className="text-[var(--text-tertiary)] whitespace-nowrap">{i18nT("auto.waiting_for_input", undefined, "Waiting for input")}</span>;
   }
 
   return null;
@@ -513,7 +513,7 @@ export function SessionCard({
         {/* Line 2: model + activity (left) | context bar + cost (right) */}
         <div className="flex items-center mt-1 gap-2 text-[12px]">
           {session.model && (
-            <span className="text-[var(--text-tertiary)] truncate">
+            <span className="text-[var(--text-tertiary)] truncate min-w-0">
               {session.model}
             </span>
           )}

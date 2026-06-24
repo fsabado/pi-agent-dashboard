@@ -292,6 +292,43 @@ export function registerFileRoutes(
     },
   );
 
+  // Absolute-path image server (change: chatview-inline-image-paths).
+  // Serves any local image by absolute path — no CWD restriction.
+  // Guards: localhost-only (networkGuard) + image-extension allowlist only.
+  fastify.get<{ Querystring: { path?: string } }>(
+    "/api/image",
+    { preHandler: networkGuard },
+    async (request, reply) => {
+      const imgPath = request.query.path;
+      if (!imgPath || !path.isAbsolute(imgPath)) {
+        reply.code(400);
+        return { success: false, error: "absolute path required" } satisfies ApiResponse;
+      }
+      const ext = path.extname(imgPath).toLowerCase();
+      const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".tif"]);
+      if (!IMAGE_EXTS.has(ext)) {
+        reply.code(400);
+        return { success: false, error: "not an image extension" } satisfies ApiResponse;
+      }
+      let stat;
+      try {
+        stat = await fs.stat(imgPath);
+      } catch {
+        reply.code(404);
+        return { success: false, error: "not found" } satisfies ApiResponse;
+      }
+      if (!stat.isFile()) {
+        reply.code(404);
+        return { success: false, error: "not a file" } satisfies ApiResponse;
+      }
+      reply.header("Content-Type", extToContentType(ext));
+      reply.header("Content-Disposition", "inline");
+      reply.header("Cache-Control", "private, max-age=300");
+      reply.header("Content-Length", String(stat.size));
+      return reply.send(createReadStream(imgPath));
+    },
+  );
+
   // Server-side AsciiDoc rendering (change: render-file-previews).
   // Runs `asciidoctor` in `safe: "secure"` mode so include directives /
   // dangerous attributes are neutralized. Rejects non-`.adoc`/`.asciidoc`

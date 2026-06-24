@@ -9,6 +9,7 @@ import { isDashboardRunning } from "@blackbelt-technology/pi-dashboard-shared/se
 import { isProcessAlive } from "@blackbelt-technology/pi-dashboard-shared/platform/process.js";
 
 const DEFAULT_PID_PATH = path.join(os.homedir(), ".pi", "dashboard", "server.pid");
+const DEFAULT_LOCK_PATH = path.join(os.homedir(), ".pi", "dashboard", "server.lock");
 
 export interface ServerPidOptions {
   pidPath?: string;
@@ -43,6 +44,40 @@ export function readPid(options?: ServerPidOptions): number | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Acquire an exclusive spawn lock using O_EXCL (atomic). Returns true if acquired,
+ * false if another process already holds it. The lock is auto-expired after
+ * `ttlMs` (default 30s) to recover from crashes before the lock is released.
+ */
+export function acquireSpawnLock(ttlMs = 30_000, lockPath = DEFAULT_LOCK_PATH): boolean {
+  const dir = path.dirname(lockPath);
+  fs.mkdirSync(dir, { recursive: true });
+  try {
+    // O_EXCL = fail if exists (atomic on Linux/macOS)
+    const fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
+    fs.writeSync(fd, String(process.pid));
+    fs.closeSync(fd);
+    return true;
+  } catch {
+    // Lock exists — check if it's stale
+    try {
+      const stat = fs.statSync(lockPath);
+      if (Date.now() - stat.mtimeMs > ttlMs) {
+        fs.unlinkSync(lockPath);
+        return acquireSpawnLock(ttlMs, lockPath); // retry once
+      }
+    } catch { /* ignore */ }
+    return false;
+  }
+}
+
+/**
+ * Release the spawn lock.
+ */
+export function releaseSpawnLock(lockPath = DEFAULT_LOCK_PATH): void {
+  try { fs.unlinkSync(lockPath); } catch { /* ignore */ }
 }
 
 /**

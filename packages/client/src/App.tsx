@@ -1719,7 +1719,7 @@ export default function App() {
       hasPiResourceRoute: hasPiResourceRouteFlag,
     });
     return apiProvider(
-      <div className="bg-[var(--bg-primary)] text-[var(--text-primary)]">
+      <div className="h-[100dvh] overflow-hidden flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
         <PluginStalenessBanner />
         <ConnectionStatusBanner
           status={status}

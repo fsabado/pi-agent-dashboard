@@ -19,6 +19,12 @@ export interface PopoverFlipOptions {
   /** Whether the popover is open. No measurement / listeners while false. */
   open: boolean;
   /**
+   * Width of the popover in px. When provided, enables horizontal flip:
+   * switches from `right-0` to `left-0` anchoring when there is not enough
+   * space to the left of the trigger to fit the popover.
+   */
+  popoverWidth?: number;
+  /**
    * Approximate popover height in px. Used to decide when below-space is too
    * short to fit. Defaults to `Infinity` (unknown → flip whenever below-space
    * dips under `threshold`).
@@ -35,6 +41,8 @@ export interface PopoverFlipState {
   flipUp: boolean;
   /** Clamped max height (px) for the popover in the chosen direction. */
   maxHeight: number;
+  /** True → anchor popover to left edge of trigger (`left-0`), not right (`right-0`). */
+  flipLeft: boolean;
 }
 
 /** Minimum popover height so it never collapses to nothing. */
@@ -42,13 +50,13 @@ export const MIN_POPOVER_HEIGHT = 120;
 const DEFAULT_GAP = 8;
 const DEFAULT_THRESHOLD = 200;
 
-const CLOSED_STATE: PopoverFlipState = { flipUp: false, maxHeight: MIN_POPOVER_HEIGHT };
+const CLOSED_STATE: PopoverFlipState = { flipUp: false, maxHeight: MIN_POPOVER_HEIGHT, flipLeft: false };
 
 export function usePopoverFlip(
   triggerRef: React.RefObject<HTMLElement | null>,
   options: PopoverFlipOptions,
 ): PopoverFlipState {
-  const { open, estimatedHeight = Infinity, gap = DEFAULT_GAP, threshold = DEFAULT_THRESHOLD } = options;
+  const { open, estimatedHeight = Infinity, gap = DEFAULT_GAP, threshold = DEFAULT_THRESHOLD, popoverWidth } = options;
   const [state, setState] = useState<PopoverFlipState>(CLOSED_STATE);
 
   const measure = useCallback(() => {
@@ -60,8 +68,11 @@ export function usePopoverFlip(
     const spaceAbove = rect.top - gap;
     const flipUp = spaceBelow < Math.min(estimatedHeight, threshold) && spaceAbove > spaceBelow;
     const maxHeight = Math.max(MIN_POPOVER_HEIGHT, flipUp ? spaceAbove : spaceBelow);
-    setState({ flipUp, maxHeight });
-  }, [triggerRef, estimatedHeight, gap, threshold]);
+    // Horizontal flip: use left-0 when the trigger's left edge can't fit
+    // the popover to the left (right-0 default would go off-screen).
+    const flipLeft = !!popoverWidth && rect.right - popoverWidth < 0;
+    setState({ flipUp, maxHeight, flipLeft });
+  }, [triggerRef, estimatedHeight, gap, threshold, popoverWidth]);
 
   useEffect(() => {
     if (!open || typeof window === "undefined") return;

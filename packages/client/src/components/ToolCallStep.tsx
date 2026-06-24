@@ -1,4 +1,6 @@
 import React, { useState, type ReactNode } from "react";
+import { getApiBase } from "../lib/api-context.js";
+import { ImageLightbox } from "./ImageLightbox.js";
 import { Icon } from "@mdi/react";
 import { mdiLoading, mdiCheck, mdiAlertCircle, mdiChevronRight, mdiChevronDown, mdiStop, mdiAlert, mdiHelpCircleOutline } from "@mdi/js";
 import { getToolRenderer, type ToolContext } from "./tool-renderers/index.js";
@@ -82,6 +84,46 @@ function getSummary(toolName: string, args?: Record<string, unknown>): string {
   return toolName;
 }
 
+// Detect absolute image paths in tool result text and render them inline.
+const IMAGE_PATH_RE = /(?<![\w.])(\/[\w.\-/]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff?))/gi;
+const IMAGE_EXTS = new Set([".png",".jpg",".jpeg",".gif",".webp",".svg",".bmp",".tiff",".tif"]);
+
+function extractImagePaths(text: string | undefined): string[] {
+  if (!text) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const m of text.matchAll(IMAGE_PATH_RE)) {
+    const p = m[1];
+    const ext = p.slice(p.lastIndexOf(".")).toLowerCase();
+    if (IMAGE_EXTS.has(ext) && !seen.has(p)) { seen.add(p); out.push(p); }
+  }
+  return out;
+}
+
+function LocalImageRow({ paths }: { paths: string[] }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  if (paths.length === 0) return null;
+  const base = getApiBase();
+  return (
+    <>
+      <div className="flex flex-row gap-2 mt-3 overflow-x-auto">
+        {paths.map((p) => (
+          <img
+            key={p}
+            src={`${base}/api/image?path=${encodeURIComponent(p)}`}
+            alt={p.split("/").pop()}
+            title={p}
+            className="w-1/4 flex-shrink-0 min-w-[80px] max-h-48 rounded-lg ring-1 ring-[var(--border-subtle)] object-contain cursor-zoom-in hover:ring-blue-500/50 hover:opacity-90 transition-all"
+            onClick={() => setLightbox(`${base}/api/image?path=${encodeURIComponent(p)}`)}
+            onError={(e) => { (e.target as HTMLImageElement).style.display="none"; }}
+          />
+        ))}
+      </div>
+      {lightbox && <ImageLightbox src={lightbox} alt={lightbox} onClose={() => setLightbox(null)} />}
+    </>
+  );
+}
+
 const statusIcons: Record<string, ReactNode> = {
   running: <Icon path={mdiLoading} size={0.55} spin />,
   complete: <Icon path={mdiCheck} size={0.55} />,
@@ -122,9 +164,9 @@ export function ToolCallStep({ toolName, toolCallId, args, status, result, image
   return (
     <div className={`${isMobile ? "mx-2" : "mx-4"} border-l-2 border-[var(--border-secondary)] pl-3`}>
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => { if (!hasImages) setExpanded(!expanded); }}
         title={getSummary(toolName, args)}
-        className={`flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] w-full text-left ${isMobile ? "min-h-[44px] py-2" : ""}`}
+        className={`flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] w-full text-left ${hasImages ? "" : "hover:text-[var(--text-secondary)]"} ${isMobile ? "min-h-[44px] py-2" : ""}`}
       >
         <span className={`inline-flex ${
           status === "error"
@@ -163,12 +205,17 @@ export function ToolCallStep({ toolName, toolCallId, args, status, result, image
             <Icon path={mdiAlert} size={0.45} />
           </span>
         )}
-        <span className="ml-auto text-[var(--text-muted)] inline-flex">
-          <Icon path={expanded ? mdiChevronDown : mdiChevronRight} size={0.6} />
-        </span>
+        {!hasImages && (
+          <span className="ml-auto text-[var(--text-muted)] inline-flex">
+            <Icon path={expanded ? mdiChevronDown : mdiChevronRight} size={0.6} />
+          </span>
+        )}
       </button>
       {expanded && showResultBody && (
-        <div className="mt-1 ml-4 p-2 bg-[var(--bg-secondary)] rounded-xl shadow-md border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] overflow-x-auto">
+        <div className={hasImages
+          ? "mt-1 text-xs text-[var(--text-secondary)]"
+          : "mt-1 ml-4 p-2 bg-[var(--bg-secondary)] rounded-xl shadow-md border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] overflow-x-auto"
+        }>
           <ErrorBoundary>
             {PluginComponent && pluginClaim ? (
               <CurrentPluginLayer pluginId={pluginClaim.pluginId}>
@@ -197,6 +244,8 @@ export function ToolCallStep({ toolName, toolCallId, args, status, result, image
           </ErrorBoundary>
         </div>
       )}
+      {/* Inline-render any image file paths found in the result text */}
+      {!hasImages && <LocalImageRow paths={extractImagePaths(result)} />}
     </div>
   );
 }

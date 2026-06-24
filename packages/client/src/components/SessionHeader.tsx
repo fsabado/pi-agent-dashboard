@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@mdi/react";
 import { mdiPencilOutline, mdiArrowLeft, mdiPaperclip, mdiRefresh, mdiLinkOff, mdiPlay, mdiFileCompare, mdiHeadLightbulb, mdiViewGridOutline, mdiPlayCircleOutline, mdiSourceFork } from "@mdi/js";
+import { ComboPill } from "./ComboPill.js";
 import type { DashboardSession, OpenSpecChange, CommandInfo, ImageContent } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 import type { SessionState } from "../lib/event-reducer.js";
 import type { DetectedEditor } from "../lib/editor-api.js";
@@ -471,24 +472,27 @@ export function SessionHeader({ session, state, onRename, showBack, onBack, mobi
       )}
       {isEnded ? (
         <>
-          <button
+          <ComboPill
+            keycap="▶"
+            icon={mdiPlayCircleOutline}
+            label={i18nT("auto.resume", undefined, "Resume")}
+            variant="resume"
+            title={i18nT("auto.resume_session_continue_same_session", undefined, "Resume session (continue same session)")}
             onClick={() => onResume!("continue")}
             disabled={!!session.resuming}
-            className="text-[10px] px-1.5 py-0.5 rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed mr-1"
-            title={i18nT("auto.resume_session_continue_same_session", undefined, "Resume session (continue same session)")}
-            data-testid="header-resume-button"
-          >
-            <Icon path={mdiPlayCircleOutline} size={0.4} className="inline mr-0.5" />{i18nT("auto.resume", undefined, "Resume")}
-          </button>
-          <button
+            testId="header-resume-button"
+            className="mr-1"
+          />
+          <ComboPill
+            keycap="F"
+            icon={mdiSourceFork}
+            label={i18nT("auto.fork", undefined, "Fork")}
+            variant="fork"
+            title={i18nT("auto.fork_session_new_session_from_this", undefined, "Fork session (new session from this point)")}
             onClick={() => onResume!("fork")}
             disabled={!!session.resuming}
-            className="text-[10px] px-1.5 py-0.5 rounded border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={i18nT("auto.fork_session_new_session_from_this", undefined, "Fork session (new session from this point)")}
-            data-testid="header-fork-button"
-          >
-            <Icon path={mdiSourceFork} size={0.4} className="inline mr-0.5" />{i18nT("auto.fork", undefined, "Fork")}
-          </button>
+            testId="header-fork-button"
+          />
         </>
       ) : (
         <span className="text-[var(--text-muted)]">{formatDuration(duration)}</span>

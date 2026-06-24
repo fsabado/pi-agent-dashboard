@@ -64,7 +64,7 @@ function ReadToolImages({ images, filePath }: { images: ToolRendererProps["image
   const [lightboxSrc, setLightboxSrc] = useState<{ src: string; alt: string } | null>(null);
   return (
     <>
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-col gap-3">
         {images!.map((img, i) => {
           const src = `data:${img.mimeType};base64,${img.data}`;
           const alt = filePath ?? `Image ${i + 1}`;
@@ -73,7 +73,7 @@ function ReadToolImages({ images, filePath }: { images: ToolRendererProps["image
               key={i}
               src={src}
               alt={alt}
-              className="max-w-[512px] max-h-[512px] rounded border border-white/20 object-contain cursor-pointer"
+              className="w-3/4 rounded-xl shadow-lg ring-1 ring-[var(--border-subtle)] object-contain cursor-zoom-in hover:ring-blue-500/50 hover:shadow-xl transition-all duration-150"
               onClick={() => setLightboxSrc({ src, alt })}
             />
           );

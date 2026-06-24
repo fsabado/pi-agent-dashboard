@@ -35,7 +35,7 @@ import {
 import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
-import { readPid, removePid, isServerRunning } from "./server-pid.js";
+import { readPid, removePid, isServerRunning, acquireSpawnLock, releaseSpawnLock } from "./server-pid.js";
 import {
   findPortHolders as platformFindPortHolders,
   isProcessAlive as platformIsProcessAlive,
@@ -216,64 +216,82 @@ async function runForeground(config: ServerConfig): Promise<void> {
  */
 async function cmdStart(config: ServerConfig): Promise<void> {
   assertNodeVersionSupported();
-  const running = await isServerRunning(config.port);
-  if (running) {
-    console.log(`Dashboard server is already running (pid ${running})`);
-    return;
+
+  // Acquire exclusive lock before checking/spawning to prevent concurrent
+  // pi invocations both seeing "not running" and both spawning a server.
+  if (!acquireSpawnLock()) {
+    // Another pi invocation is currently starting the dashboard — wait for it.
+    await new Promise(r => setTimeout(r, 5_000));
+    const running = await isServerRunning(config.port);
+    if (running) {
+      console.log(`Dashboard server is already running (pid ${running})`);
+      return;
+    }
+    // Still not up after 5s — fall through and try ourselves
   }
-
-  // Check if port is occupied by another service
-  const portStatus = await isDashboardRunning(config.port);
-  if (portStatus.portConflict) {
-    console.error(`Port ${config.port} is occupied by another service (not the dashboard).`);
-    console.error(`Change the port in ~/.pi/dashboard/config.json or use --port <n>`);
-    process.exit(1);
-  }
-
-  // Spawn ourselves in foreground mode (no subcommand) as a detached process.
-  // All concerns below — jiti loader resolution, --import argv URL-wrapping,
-  // env merge, log-file header, readiness polling, port-conflict / early-exit
-  // detection — are owned by the shared `launchDashboardServer` primitive.
-  const cliPath = fileURLToPath(import.meta.url);
-  const args: string[] = [];
-  if (config.port !== 8000) args.push("--port", String(config.port));
-  if (config.piPort !== 9999) args.push("--pi-port", String(config.piPort));
-  if (config.dev) args.push("--dev");
-  if (!config.tunnel) args.push("--no-tunnel");
-
-  const logDir = path.join(os.homedir(), ".pi", "dashboard");
-  const logPath = path.join(logDir, "server.log");
 
   try {
-    const result = await launchDashboardServer({
-      cliPath,
-      extraArgs: args,
-      stdio: { logFile: logPath },
-      starter: "Standalone",
-      healthTimeoutMs: 30_000,
-      port: config.port,
-    });
-    const reportedPid = result.reportedPid ?? readPid() ?? result.childPid;
-    console.log(`Dashboard server started (pid ${reportedPid}) at http://localhost:${config.port}`);
-  } catch (err: unknown) {
-    if (err instanceof JitiNotFoundError) {
-      console.error(`[pi-dashboard] ${err.message}`);
-      process.exit(1);
+    const running = await isServerRunning(config.port);
+    if (running) {
+      console.log(`Dashboard server is already running (pid ${running})`);
+      return;
     }
-    if (err instanceof PortConflictError) {
-      console.error(`Port ${err.port} is occupied by another service (not the dashboard).`);
+
+    // Check if port is occupied by another service
+    const portStatus = await isDashboardRunning(config.port);
+    if (portStatus.portConflict) {
+      console.error(`Port ${config.port} is occupied by another service (not the dashboard).`);
       console.error(`Change the port in ~/.pi/dashboard/config.json or use --port <n>`);
       process.exit(1);
     }
-    if (err instanceof EarlyExitError) {
-      console.error(`Failed to start dashboard server (child process exited with code ${err.code})`);
+
+    // Spawn ourselves in foreground mode (no subcommand) as a detached process.
+    // All concerns below — jiti loader resolution, --import argv URL-wrapping,
+    // env merge, log-file header, readiness polling, port-conflict / early-exit
+    // detection — are owned by the shared `launchDashboardServer` primitive.
+    const cliPath = fileURLToPath(import.meta.url);
+    const args: string[] = [];
+    if (config.port !== 8000) args.push("--port", String(config.port));
+    if (config.piPort !== 9999) args.push("--pi-port", String(config.piPort));
+    if (config.dev) args.push("--dev");
+    if (!config.tunnel) args.push("--no-tunnel");
+
+    const logDir = path.join(os.homedir(), ".pi", "dashboard");
+    const logPath = path.join(logDir, "server.log");
+
+    try {
+      const result = await launchDashboardServer({
+        cliPath,
+        extraArgs: args,
+        stdio: { logFile: logPath },
+        starter: "Standalone",
+        healthTimeoutMs: 30_000,
+        port: config.port,
+      });
+      const reportedPid = result.reportedPid ?? readPid() ?? result.childPid;
+      console.log(`Dashboard server started (pid ${reportedPid}) at http://localhost:${config.port}`);
+    } catch (err: unknown) {
+      if (err instanceof JitiNotFoundError) {
+        console.error(`[pi-dashboard] ${err.message}`);
+        process.exit(1);
+      }
+      if (err instanceof PortConflictError) {
+        console.error(`Port ${err.port} is occupied by another service (not the dashboard).`);
+        console.error(`Change the port in ~/.pi/dashboard/config.json or use --port <n>`);
+        process.exit(1);
+      }
+      if (err instanceof EarlyExitError) {
+        console.error(`Failed to start dashboard server (child process exited with code ${err.code})`);
+        console.error(`Check logs at ${logPath}`);
+        process.exit(1);
+      }
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error(`Failed to start dashboard server (${reason})`);
       console.error(`Check logs at ${logPath}`);
       process.exit(1);
     }
-    const reason = err instanceof Error ? err.message : String(err);
-    console.error(`Failed to start dashboard server (${reason})`);
-    console.error(`Check logs at ${logPath}`);
-    process.exit(1);
+  } finally {
+    releaseSpawnLock();
   }
 }
 
