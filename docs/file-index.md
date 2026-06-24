@@ -17,7 +17,8 @@ Per-area maps of every architecturally significant file in pi-agent-dashboard. L
 | Electron app | [`file-index-electron.md`](./file-index-electron.md) | `packages/electron/` |
 | Docker packaging | [`file-index-docker.md`](./file-index-docker.md) | `docker/` |
 | Dashboard plugins | [`file-index-plugins.md`](./file-index-plugins.md) | `packages/dashboard-plugin-runtime/`, `packages/{jj,flows,demo}-plugin/` |
-| Skills, scripts, CI | [`file-index-skills-misc.md`](./file-index-skills-misc.md) | `.pi/skills/`, `scripts/`, `public/`, `.github/`, misc |
+| Knowledge base | [`file-index-kb.md`](./file-index-kb.md) | `packages/kb/`, `packages/kb-extension/` |
+| Skills, scripts, CI | [`file-index-skills-misc.md`](./file-index-skills-misc.md) | `.pi/skills/`, `scripts/`, `public/`, `.github/`, `packages/session-distiller/`, misc |
 
 ## Standalone topic docs
 
@@ -25,6 +26,7 @@ Per-area maps of every architecturally significant file in pi-agent-dashboard. L
 |---|---|
 | [`faq.md`](./faq.md) | Recurring how-to questions. Answers point at README.md + docs/ sources. |
 | [`chat-display-preferences.md`](./chat-display-preferences.md) | `DisplayPrefs` storage, merge rule, transport, migration, first-launch. See change: configurable-chat-display. |
+| [`code-quality.md`](./code-quality.md) | Biome ratchet system. tier ladder. graduation criterion. rollout phases. oracle. rough edge. See change: add-code-quality-skill. |
 
 ## Adding a new file
 

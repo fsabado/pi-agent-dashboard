@@ -44,3 +44,6 @@ images/
 # In-progress OpenSpec changes
 openspec/changes/*/
 doc-example/
+
+# kb knowledge base index
+/.pi/dashboard/kb/index.db
