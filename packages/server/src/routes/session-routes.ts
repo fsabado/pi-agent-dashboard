@@ -9,6 +9,12 @@ import type { EventStore } from "../memory-event-store.js";
 import type { ApiResponse } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 import type { NetworkGuard } from "./route-deps.js";
 import { extractFileChanges, enrichWithVcsDiff } from "../session-diff.js";
+import type { DashboardSession } from "@blackbelt-technology/pi-dashboard-shared/types.js";
+
+/** Strip server-internal fields before sending sessions to the browser. */
+function stripServerFields({ sessionDir: _sd, ...s }: DashboardSession): Omit<DashboardSession, "sessionDir"> {
+  return s;
+}
 
 export function registerSessionRoutes(
   fastify: FastifyInstance,
@@ -21,7 +27,7 @@ export function registerSessionRoutes(
   const { sessionManager, eventStore, networkGuard } = deps;
 
   fastify.get("/api/sessions", async () => {
-    const sessions = sessionManager.listAll();
+    const sessions = sessionManager.listAll().map(stripServerFields);
     return { success: true, data: sessions } satisfies ApiResponse;
   });
 

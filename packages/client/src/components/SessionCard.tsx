@@ -78,7 +78,7 @@ export function ActivityIndicator({ session }: { session: DashboardSession }) {
   }
 
   if (session.status === "idle" || session.status === "active") {
-    return <span className="text-[var(--text-tertiary)] whitespace-nowrap">{i18nT("auto.waiting_for_input", undefined, "Waiting for input")}</span>;
+    return <span className="text-[var(--text-tertiary)] whitespace-nowrap">{i18nT("auto.ready", undefined, "Ready")}</span>;
   }
 
   return null;
@@ -506,7 +506,7 @@ export function SessionCard({
             className="text-[11px] text-[var(--text-muted)] flex-shrink-0"
             title={`Started ${new Date(session.startedAt).toLocaleString()}`}
           >
-            {formatRelativeTime(now - selectBadgeTimestamp(session))}
+            {formatRelativeTime(now - selectBadgeTimestamp(session), selectBadgeTimestamp(session))}
           </span>
         </div>
 
@@ -595,7 +595,7 @@ export function SessionCard({
     <li
       data-session-id={session.id}
       onClick={() => onSelect(session.id)}
-      className={`relative isolate px-2 py-2 cursor-pointer rounded-xl shadow-md shadow-[var(--shadow-card)] border hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${
+      className={`group relative isolate px-2 py-2 cursor-pointer rounded-xl shadow-md shadow-[var(--shadow-card)] border hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${
         isSelected
           ? "border-blue-500/60 bg-blue-500/5 ring-1 ring-blue-500/30 card-selected-ring"
           : "border-[var(--border-subtle)] bg-[var(--bg-tertiary)]"
@@ -674,7 +674,7 @@ export function SessionCard({
           className="text-[10px] text-[var(--text-muted)]"
           title={`Started ${new Date(session.startedAt).toLocaleString()}`}
         >
-          {formatRelativeTime(now - selectBadgeTimestamp(session))}
+          {formatRelativeTime(now - selectBadgeTimestamp(session), selectBadgeTimestamp(session))}
         </span>
         {/* Hide/unhide button */}
         {isHidden ? (
@@ -753,7 +753,7 @@ export function SessionCard({
           <button
             onClick={(e) => { e.stopPropagation(); onSpawnSibling(session); }}
             disabled={!!session.cwdMissing}
-            className="text-[9px] px-1 py-px rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-[9px] px-1 py-px rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100 transition-opacity"
             title={session.cwdMissing ? "session's directory no longer exists" : "+Session clean sibling in same folder"}
             data-testid="session-card-spawn-sibling"
           >
@@ -769,7 +769,7 @@ export function SessionCard({
           <button
             onClick={(e) => { e.stopPropagation(); onSpawnWorktree(session); }}
             disabled={!!session.cwdMissing}
-            className="text-[9px] px-1 py-px rounded border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-[9px] px-1 py-px rounded border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 disabled:opacity-50 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100 transition-opacity"
             title={session.cwdMissing ? "session's directory no longer exists" : "Create git worktree + spawn session inside it"}
             data-testid="session-card-spawn-worktree"
           >
@@ -790,7 +790,7 @@ export function SessionCard({
           />
         )}
         {session.cost != null && session.cost > 0 && (
-          <span className="text-[var(--text-tertiary)] flex-shrink-0">${session.cost.toFixed(2)}</span>
+          <span className="text-[var(--text-tertiary)] flex-shrink-0 bg-[var(--bg-secondary)] px-1 rounded">${session.cost.toFixed(2)}</span>
         )}
       </div>
 

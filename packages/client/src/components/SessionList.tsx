@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { SpawnErrorBanner } from "./SpawnErrorBanner.js";
 import { useLocation } from "wouter";
 import { Icon } from "@mdi/react";
-import { mdiChevronRight, mdiChevronDown, mdiChevronUp, mdiPlus, mdiPin, mdiFolder, mdiFolderOpen, mdiConsoleLine, mdiCog, mdiPuzzleOutline } from "@mdi/js";
+import { mdiChevronRight, mdiChevronDown, mdiChevronUp, mdiPlus, mdiPin, mdiFolder, mdiFolderOpen, mdiConsoleLine, mdiCog, mdiPuzzleOutline, mdiFolderPlus, mdiViewGridPlus } from "@mdi/js";
 import { PiLogo } from "./PiLogo.js";
 import { FolderActionBar } from "./FolderActionBar.js";
 import { FolderSpawnButtons } from "./FolderSpawnButtons.js";
@@ -49,6 +49,7 @@ import { BranchSwitchDialog } from "./BranchSwitchDialog.js";
 import { WorktreeSpawnDialog } from "./WorktreeSpawnDialog.js";
 import { maybeAutoInitWorktreeOnSpawn } from "../lib/auto-init-worktree.js";
 import { truncatePathMiddle } from "../lib/truncate-path.js";
+import { formatRelativeTime } from "../lib/format.js";
 import { selectedCardScrollFingerprint } from "../lib/session-list-scroll.js";
 import { TunnelButton } from "./TunnelButton.js";
 import { InstallButton } from "./InstallButton.js";
@@ -591,7 +592,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
               title={t("sessionList.addToWorkspace", undefined, "Add to workspace")}
               data-testid={`add-to-workspace-btn-${group.cwd}`}
             >
-              +ws
+              <Icon path={mdiViewGridPlus} size={0.5} />
             </button>
             {menuOpen && (
               <AddToWorkspaceMenu
@@ -913,10 +914,15 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             const matched = sessionSearch.length > 0
               ? filterByQuery(group.sessions, sessionSearch)
               : group.sessions;
-            const endedCount = matched.filter((s) => s.status === "ended").length;
+            const endedSessions2 = matched.filter((s) => s.status === "ended");
+            const endedCount = endedSessions2.length;
             if (endedCount === 0) return null;
             if (sessionSearch.length > 0) return null; // auto-expanded
             const expanded = endedExpanded.has(group.cwd);
+            const mostRecentEndedTs = endedSessions2.reduce((best, s) => Math.max(best, s.endedAt ?? s.updatedAt ?? s.startedAt), 0);
+            const mostRecentLabel = !expanded && mostRecentEndedTs > 0
+              ? ` · ${formatRelativeTime(now - mostRecentEndedTs, mostRecentEndedTs)} ago`
+              : "";
             return (
               <button
                 onClick={(e) => { e.stopPropagation(); toggleEndedExpanded(group.cwd); }}
@@ -932,7 +938,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
                     pointing down at it would still mean "this collapses what's
                     below me" — inverse direction is intentional. */}
                 <Icon path={expanded ? mdiChevronUp : mdiChevronRight} size={0.4} />
-                <span>{expanded ? t("sessionList.hideEnded", undefined, "Hide ended") : t("sessionList.showEnded", { count: endedCount }, `${endedCount} ended`)}</span>
+                <span>{expanded ? t("sessionList.hideEnded", undefined, "Hide ended") : `${endedCount} ended${mostRecentLabel}`}</span>
               </button>
             );
           })()}
@@ -957,6 +963,28 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             <InstallButton canInstall={installPrompt.canInstall} isInstalled={installPrompt.isInstalled} prompt={installPrompt.prompt} />
             <TunnelButton showToast={showToast} />
             {headerExtra}
+            {/* Compact Add Folder button — moves the full-width tile out of the scroll list */}
+            {onOpenPinDialog && (
+              <button
+                onClick={() => onOpenPinDialog?.()}
+                className="text-[var(--text-tertiary)] hover:text-blue-400 transition-colors"
+                title={t("sessionList.addFolder", undefined, "Add Folder")}
+                data-testid="header-add-folder-btn"
+              >
+                <Icon path={mdiFolderPlus} size={0.6} />
+              </button>
+            )}
+            {/* Compact New Workspace button */}
+            {onCreateWorkspace && (
+              <button
+                onClick={() => setNewWsOpen({ pendingFolder: null })}
+                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                title={t("sessionList.newWorkspace", undefined, "New Workspace")}
+                data-testid="header-new-workspace-btn"
+              >
+                <Icon path={mdiViewGridPlus} size={0.6} />
+              </button>
+            )}
             <button
               onClick={() => navigate("/settings")}
               className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
@@ -967,13 +995,13 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between px-3 py-1.5 gap-2" data-testid="header-filter-bar">
+        <div className="flex items-center justify-between px-3 py-1.5 gap-2 bg-[var(--bg-secondary)]" data-testid="header-filter-bar">
           <input
             type="search"
             value={workspaceFilter}
             onChange={(e) => setWorkspaceFilter(e.target.value)}
             placeholder={t("sessionList.folderPlaceholder", undefined, "Folder...")}
-            className="min-w-0 flex-1 px-2 py-1 text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-blue)]"
+            className="min-w-0 flex-1 px-2 py-1 text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent-blue)]"
             data-testid="workspace-filter-input"
             aria-label={t("sessionList.filterFolders", undefined, "Filter folders by path")}
           />
@@ -982,7 +1010,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             value={sessionSearch}
             onChange={(e) => setSessionSearch(e.target.value)}
             placeholder={t("sessionList.sessionPlaceholder", undefined, "Session...")}
-            className="min-w-0 flex-1 px-2 py-1 text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-blue)]"
+            className="min-w-0 flex-1 px-2 py-1 text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent-blue)]"
             data-testid="session-search-input"
             aria-label={t("sessionList.searchSessions", undefined, "Search sessions across folders")}
           />
@@ -997,17 +1025,6 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
       ) : (
         <DndContext sensors={sensors} collisionDetection={sameTypeClosestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
         <ul className="flex flex-col gap-2 p-2">
-          {/* Elevated dashboard-scope add buttons: rendered as the FIRST list
-              item, above workspace tiers and pinned folder groups.
-              See change: elevate-dashboard-add-buttons. */}
-          {onOpenPinDialog && (
-            <li>
-              <DashboardSpawnButtons
-                onAddFolder={() => onOpenPinDialog?.()}
-                onNewWorkspace={onCreateWorkspace ? () => setNewWsOpen({ pendingFolder: null }) : undefined}
-              />
-            </li>
-          )}
           {/* Workspace tier (folder-workspaces): rendered ABOVE the top-level
               area when at least one workspace exists. */}
           {workspaceTiers && (

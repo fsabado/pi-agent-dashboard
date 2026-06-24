@@ -1179,9 +1179,19 @@ export async function createServer(config: ServerConfig): Promise<DashboardServe
       // some HTTP/2 proxy chains (notably zrok free-tier) occasionally
       // stream-reset as ERR_ABORTED 500 in browsers.
       preCompressed: true,
+      // Disable @fastify/send's default Cache-Control (public, max-age=0)
+      // so setHeaders has full control without being overwritten.
+      cacheControl: false,
       setHeaders: (res, filePath) => {
         if (filePath.endsWith(".html")) {
           res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          // Vite content-hashes every filename under assets/ — safe to cache
+          // for 1 year. Any content change gets a new hash → new URL.
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          // Non-hashed root files (sw.js, manifest.json, favicons) — short cache.
+          res.setHeader("Cache-Control", "no-cache");
         }
       },
     });

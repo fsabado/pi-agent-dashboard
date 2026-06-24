@@ -664,7 +664,6 @@ function initBridge(pi: ExtensionAPI) {
         const quiesceMs = (msg as any).quiesceMs;
         if (typeof quiesceMs === "number" && quiesceMs > 0) {
           connection.pauseAutoStart(quiesceMs);
-          console.log(`[dashboard] server announced restart (reason=${reason} quiesceMs=${quiesceMs})`);
         }
         return;
       }

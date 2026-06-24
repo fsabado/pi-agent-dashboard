@@ -11,12 +11,18 @@ describe("truncatePathMiddle", () => {
     expect(truncatePathMiddle(p, p.length)).toBe(p);
   });
 
-  it("truncates middle of long path with ellipsis", () => {
+  it("truncates prefix, keeps last 2 segments", () => {
     const result = truncatePathMiddle("/Users/robson/Project/some/deep/nested/judo-meta-esm", 40);
     expect(result.length).toBeLessThanOrEqual(40);
     expect(result).toContain("…");
     expect(result).toMatch(/\/judo-meta-esm$/);
-    expect(result).toMatch(/^\/Users/);
+    expect(result).toBe("…/nested/judo-meta-esm");
+  });
+
+  it("falls back to single last segment when 2-segment form is too long", () => {
+    const result = truncatePathMiddle("/a/verylongparent/verylonglast", 20);
+    expect(result.length).toBeLessThanOrEqual(20);
+    expect(result).toBe("…/verylonglast");
   });
 
   it("preserves two-segment path unchanged", () => {

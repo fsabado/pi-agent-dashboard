@@ -317,7 +317,8 @@ export function createBrowserGateway(
     // previous server lifetime are dropped atomically.
     // See change: fix-stale-sessions-on-reconnect.
     {
-      const sessionsSnapshot = sessionManager.listAll();
+      const // Strip server-internal fields (sessionDir) before sending to browser.
+      sessionsSnapshot = sessionManager.listAll().map(({ sessionDir: _sd, ...s }) => s);
       const orders: Record<string, string[]> = {};
       if (sessionOrderManager) {
         for (const [cwd, sessionIds] of Object.entries(sessionOrderManager.getAllOrders())) {
@@ -761,9 +762,10 @@ export function createBrowserGateway(
       // Carry the originating client `requestId` (when known) so the
       // browser can auto-select / dismiss its placeholder by exact
       // correlation. See change: spawn-correlation-token.
+      const { sessionDir: _sd, ...sessionForBrowser } = session;
       broadcast({
         type: "session_added",
-        session,
+        session: sessionForBrowser,
         ...(opts?.spawnRequestId ? { spawnRequestId: opts.spawnRequestId } : {}),
       });
     },

@@ -55,8 +55,10 @@ export function formatMessageTime(ts: number, now?: number): string {
   return `${date.getFullYear()}-${pad2m(date.getMonth() + 1)}-${pad2m(date.getDate())} ${time}`;
 }
 
-/** Format millisecond duration to relative time: 180000 → "3m" */
-export function formatRelativeTime(ms: number): string {
+/** Format millisecond duration to relative time: 180000 → "3m".
+ * When ms < 24h and absoluteTs is provided, returns "HH:MM" of that timestamp
+ * (more precise than "3h" which covers a full hour's range). */
+export function formatRelativeTime(ms: number, absoluteTs?: number): string {
   if (ms <= 0) return "0s";
 
   const seconds = Math.floor(ms / 1000);
@@ -66,7 +68,13 @@ export function formatRelativeTime(ms: number): string {
   if (minutes < 60) return `${minutes}m`;
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) {
+    if (absoluteTs != null) {
+      const d = new Date(absoluteTs);
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+    return `${hours}h`;
+  }
 
   const days = Math.floor(hours / 24);
   return `${days}d`;
