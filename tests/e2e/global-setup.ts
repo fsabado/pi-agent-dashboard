@@ -3,8 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  DASHBOARD_PORT,
   HEALTH_URL,
   MARKER_PATH,
+  PI_GATEWAY_PORT,
   TEST_UP,
   USE_RUNNING,
   waitForHealth,
@@ -34,12 +36,29 @@ export default async function globalSetup(): Promise<void> {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "pi-e2e-ws-"));
   const logPath = path.join(path.dirname(MARKER_PATH), "test-up.log");
   const logFd = fs.openSync(logPath, "a");
+  // PI_E2E_SEED=1 tells test-entrypoint.sh to seed a fake provider credential
+  // (clears the LandingPage onboarding gate) and open the network guard (lets
+  // the in-container browser reach guarded endpoints like directory listing).
+  // Without it, scenario specs cannot pin a folder or spawn a session. Blank
+  // any host provider keys so they never leak into the disposable container.
+  // Override-as-a-pair: the container binds + listens on exactly the port
+  // Playwright probes (D1 override path), keeping baseURL in sync.
+  const env = {
+    ...process.env,
+    PI_E2E_SEED: "1",
+    ANTHROPIC_API_KEY: "",
+    OPENAI_API_KEY: "",
+    GEMINI_API_KEY: "",
+    DASHBOARD_PORT: String(DASHBOARD_PORT),
+    PI_GATEWAY_PORT: String(PI_GATEWAY_PORT),
+  };
   let child;
   try {
     child = spawn("bash", [TEST_UP, "-d"], {
       cwd: workspace,
       detached: true,
       stdio: ["ignore", logFd, logFd],
+      env,
     });
   } finally {
     fs.closeSync(logFd);
