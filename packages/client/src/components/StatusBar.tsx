@@ -88,7 +88,7 @@ export function StatusBar({
 
   return (
     <div
-      className="flex items-center justify-between px-4 py-1 border-t border-[var(--border-primary)] text-xs"
+      className="flex items-center justify-between px-2 sm:px-4 py-1 border-t border-[var(--border-primary)] text-xs"
       data-testid="status-bar"
     >
       <div className="flex items-center gap-2 flex-wrap min-w-0">

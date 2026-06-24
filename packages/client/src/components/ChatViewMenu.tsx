@@ -43,7 +43,7 @@ export function ChatViewMenu({ sessionId, send, currentOverride }: Props): React
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const { flipUp, maxHeight } = usePopoverFlip(triggerRef, { open });
+  const { flipUp, maxHeight, flipLeft } = usePopoverFlip(triggerRef, { open, popoverWidth: 256 });
 
   useEffect(() => {
     if (!open) return;
@@ -118,7 +118,7 @@ export function ChatViewMenu({ sessionId, send, currentOverride }: Props): React
         <div
           data-testid="chat-view-popover"
           style={{ maxHeight }}
-          className={`absolute right-0 z-30 w-64 overflow-y-auto bg-[var(--bg-secondary)] border border-[var(--border-secondary)] rounded-lg shadow-lg p-2 text-xs ${
+          className={`absolute z-30 w-64 overflow-y-auto bg-[var(--bg-secondary)] border border-[var(--border-secondary)] rounded-lg shadow-lg p-2 text-xs ${flipLeft ? "left-0" : "right-0"} ${
             flipUp ? "bottom-full mb-1" : "top-full mt-1"
           }`}
         >

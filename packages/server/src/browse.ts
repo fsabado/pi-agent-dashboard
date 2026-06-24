@@ -87,9 +87,26 @@ export async function listDirectories(
 
   const rawEntries = await fs.readdir(resolved, { withFileTypes: true });
 
-  // Filter: directories only, no hidden dirs
+  // Filter: directories only (including symlinks to directories), no hidden dirs
+  const symlinkTargetIsDir = async (e: import("node:fs").Dirent): Promise<boolean> => {
+    if (!e.isSymbolicLink()) return false;
+    try {
+      const s = await fs.stat(path.join(resolved, e.name));
+      return s.isDirectory();
+    } catch {
+      return false;
+    }
+  };
+  const symlinkResults = await Promise.all(
+    rawEntries
+      .filter((e) => e.isSymbolicLink() && !e.name.startsWith("."))
+      .map(async (e) => ({ e, isDir: await symlinkTargetIsDir(e) }))
+  );
+  const symlinkDirs = new Set(
+    symlinkResults.filter((r) => r.isDir).map((r) => r.e.name)
+  );
   let dirs = rawEntries.filter(
-    (e) => e.isDirectory() && !e.name.startsWith(".")
+    (e) => !e.name.startsWith(".") && (e.isDirectory() || symlinkDirs.has(e.name))
   );
 
   // Apply optional substring filter + tiered ranking

@@ -86,7 +86,7 @@ function ImageAttachments({ images }: { images: ChatImage[] }) {
   const [lightboxSrc, setLightboxSrc] = useState<{ src: string; alt: string } | null>(null);
   return (
     <>
-      <div className="flex gap-2 flex-wrap mb-2">
+      <div className="flex flex-row gap-2 mt-2 overflow-x-auto">
         {images.map((img, i) => {
           const src = `data:${img.mimeType};base64,${img.data}`;
           return (
@@ -94,7 +94,7 @@ function ImageAttachments({ images }: { images: ChatImage[] }) {
               key={i}
               src={src}
               alt={`Attachment ${i + 1}`}
-              className="max-w-[300px] max-h-[300px] rounded border border-white/20 object-contain cursor-pointer"
+              className="w-1/4 flex-shrink-0 min-w-[80px] max-h-48 rounded-lg border border-white/20 object-contain cursor-zoom-in hover:opacity-90 transition-opacity"
               onClick={() => setLightboxSrc({ src, alt: `Attachment ${i + 1}` })}
             />
           );
@@ -375,11 +375,6 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
               <div key={msg.id} className="mt-4 mb-4 flex flex-col items-end" {...(msg.turnIndex != null ? { "data-turn": msg.turnIndex } : {})}>
                 {msg.streamingBehavior && <StreamingBehaviorBadge behavior={msg.streamingBehavior} />}
                 <div className={bubbleMax}>
-                  {msg.images && msg.images.length > 0 && (
-                    <div className="mb-2">
-                      <ImageAttachments images={msg.images} />
-                    </div>
-                  )}
                   <SkillInvocationCard
                     skill={msg.skill}
                     rawContent={msg.content}
@@ -387,6 +382,9 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
                     entryId={msg.entryId}
                     onFork={onForkFromMessage}
                   />
+                  {msg.images && msg.images.length > 0 && (
+                    <ImageAttachments images={msg.images} />
+                  )}
                 </div>
               </div>
             );
@@ -395,9 +393,6 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
             <div key={msg.id} className="mt-4 mb-4 flex flex-col items-end" {...(msg.turnIndex != null ? { "data-turn": msg.turnIndex } : {})}>
               {msg.streamingBehavior && <StreamingBehaviorBadge behavior={msg.streamingBehavior} />}
               <div className={`bg-blue-500/10 border border-blue-500/20 border-l-2 border-l-blue-400 rounded-xl shadow-md px-4 py-2 overflow-hidden ${bubbleMax}`}>
-                {msg.images && msg.images.length > 0 && (
-                  <ImageAttachments images={msg.images} />
-                )}
                 {msg.content && (
                   <MessageBubble
                     content={msg.content}
@@ -406,6 +401,9 @@ export const ChatView = forwardRef<ChatViewHandle, Props>(function ChatView({ se
                     entryId={msg.entryId}
                     onFork={onForkFromMessage}
                   />
+                )}
+                {msg.images && msg.images.length > 0 && (
+                  <ImageAttachments images={msg.images} />
                 )}
               </div>
             </div>

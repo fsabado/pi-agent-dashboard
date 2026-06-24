@@ -593,7 +593,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
       <div className="relative">
         {renderGroup(group, isPinned)}
         {(onCreateWorkspace || (workspaces && workspaces.length > 0)) && (
-          <div className="absolute top-1 right-7">
+          <div className="absolute top-1 right-16">
             <button
               onClick={(e) => {
                 e.stopPropagation();

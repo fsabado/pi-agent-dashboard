@@ -342,10 +342,51 @@ function PiAssetImg(props: React.ImgHTMLAttributes<HTMLImageElement>) {
   );
 }
 
+// Image extensions that trigger auto-preview injection.
+const IMAGE_EXTS_RE = /\.(?:png|jpe?g|gif|webp|svg|bmp|tiff?)$/i;
+
+/**
+ * Scan markdown `content` for absolute POSIX image paths and inject a
+ * `![path](url)` block after each line that contains one. Skips fenced code
+ * blocks and indented code. Deduplicates across the whole message so the
+ * same path only produces one preview.
+ *
+ * See change: chatview-inline-image-paths.
+ */
+function injectImagePreviews(content: string): string {
+  // Match absolute paths ending in image extensions; skip if already inside
+  // a markdown image (preceded by `(` = already the URL part of `![...](url)`).
+  // Exclude ? and = to avoid matching inside query strings.
+  const PATH_RE = /(?<!\()(\/(?:[^\s`'"<>()\[\]{}?=]+\/)*[^\s`'"<>()\[\]{}?=]+\.(?:png|jpe?g|gif|webp|svg|bmp|tiff?))\b/gi;
+  const lines = content.split("\n");
+  const result: string[] = [];
+  const seen = new Set<string>();
+  let inFence = false;
+
+  for (const line of lines) {
+    result.push(line);
+    if (/^```/.test(line)) { inFence = !inFence; continue; }
+    if (inFence) continue;
+    if (/^(    |\t)/.test(line)) continue; // indented code
+
+    PATH_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = PATH_RE.exec(line)) !== null) {
+      const p = m[1];
+      if (!seen.has(p)) {
+        seen.add(p);
+        result.push(`![${p}](/api/image?path=${encodeURIComponent(p)})`);
+      }
+    }
+  }
+
+  return result.join("\n");
+}
+
 export const MarkdownContent = React.memo(function MarkdownContent({ content, context }: Props) {
   // ASCII table monospace fixer — disabled pending further refinement
   // const processedContent = useMemo(() => wrapAsciiTables(content), [content]);
-  const processedContent = content;
+  const processedContent = injectImagePreviews(content);
   const containerRef = useRef<HTMLDivElement>(null);
   const { resolved: theme, themeName } = useThemeContext();
   const syntaxStyle = getSyntaxTheme(theme, themeName);

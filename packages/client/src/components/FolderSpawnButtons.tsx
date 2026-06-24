@@ -1,17 +1,15 @@
 /**
  * Elevated spawn-button stack for folder groups in the sidebar.
  *
- * Renders two full-width stacked line buttons in the always-visible folder
- * header (below the trimmed FolderActionBar, above the plugin/OpenSpec
- * sections):
- *   - `+ New Session` (green) — always rendered.
- *   - `+ New Worktree` (orange) — rendered only when `showWorktree` holds.
+ * Renders inline ComboPill buttons (rounded pill + keycap + icon + label):
+ *   - [S] + Session (green) — always rendered.
+ *   - [W] ⑂ Worktree (orange) — rendered only when `showWorktree` holds.
  *
  * See change: elevate-folder-spawn-buttons.
+ * See change: sidebar-compact-combo-pill.
  */
-
 import { mdiPlus, mdiSourceBranchPlus } from "@mdi/js";
-import { Icon } from "@mdi/react";
+import { ComboPill } from "./ComboPill.js";
 import { t as i18nT } from "../lib/i18n";
 
 interface Props {
@@ -33,30 +31,27 @@ export function FolderSpawnButtons({
   onSpawnWorktree,
 }: Props) {
   return (
-    <div className="flex flex-col gap-1">
-      <button
+    <div className="flex flex-wrap gap-1.5">
+      <ComboPill
+        keycap="S"
+        icon={mdiPlus}
+        label={i18nT("auto.new_session_2", undefined, "Session")}
+        variant={spawningDisabled ? "neutral" : "session"}
+        title={i18nT("auto.new_pi_session", undefined, "New pi session")}
         onClick={(e) => { e.stopPropagation(); onSpawnSession(); }}
         disabled={spawningDisabled}
-        data-testid="folder-spawn-session-btn"
-        className={`focus-ring w-full text-xs px-2 py-1 min-h-[44px] sm:min-h-0 rounded border flex items-center justify-center gap-0.5 ${
-          spawningDisabled
-            ? "border-[var(--border-secondary)] text-[var(--text-secondary)] opacity-50 cursor-not-allowed"
-            : "text-green-400 border-green-500/40 bg-green-500/5 hover:text-green-300 hover:border-green-500/70"
-        }`}
-        title={i18nT("auto.new_pi_session", undefined, "New pi session")}
-      >
-        <Icon path={mdiPlus} size={0.6} /> {i18nT("auto.new_session_2", undefined, "New Session")}
-      </button>
-
+        testId="folder-spawn-session-btn"
+      />
       {showWorktree && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onSpawnWorktree!(); }}
-          data-testid="folder-spawn-worktree-btn"
-          className="focus-ring w-full text-xs px-2 py-1 min-h-[44px] sm:min-h-0 rounded border flex items-center justify-center gap-0.5 text-orange-400 border-orange-500/40 bg-orange-500/5 hover:text-orange-300 hover:border-orange-500/70"
+        <ComboPill
+          keycap="W"
+          icon={mdiSourceBranchPlus}
+          label={i18nT("auto.new_worktree_2", undefined, "Worktree")}
+          variant="worktree"
           title={i18nT("auto.new_pi_session_in_a_git", undefined, "New pi session in a git worktree")}
-        >
-          <Icon path={mdiSourceBranchPlus} size={0.6} /> {i18nT("auto.new_worktree_2", undefined, "New Worktree")}
-        </button>
+          onClick={(e) => { e.stopPropagation(); onSpawnWorktree!(); }}
+          testId="folder-spawn-worktree-btn"
+        />
       )}
     </div>
   );

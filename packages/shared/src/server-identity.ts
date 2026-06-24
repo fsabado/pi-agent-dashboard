@@ -67,16 +67,23 @@ export async function isDashboardRunning(
   const retryDelayMs = opts?.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
   const sleep = opts?._sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
 
+  // When host is "localhost", probe both 127.0.0.1 and ::1 in parallel.
+  // On machines where localhost resolves to IPv6 (::1) but the server binds
+  // to IPv4 only (0.0.0.0), the ::1 probe times out and the health check
+  // falsely reports the server as down. Trying both adapters avoids that.
+  const hosts = host === "localhost" ? ["127.0.0.1", "::1"] : [host];
+
   const attempts = retries + 1;
   let lastResult: DashboardStatus = { running: false };
 
   for (let i = 0; i < attempts; i++) {
-    const result = await probeOnce(port, host, timeoutMs);
-    // Success — return immediately.
-    if (result.running) return result;
-    // Deterministic conflict — short-circuit (retrying would mask it).
-    if (result.portConflict) return result;
-    lastResult = result;
+    // Probe all candidate hosts in parallel; first running result wins.
+    const results = await Promise.all(hosts.map(h => probeOnce(port, h, timeoutMs)));
+    const running = results.find(r => r.running);
+    if (running) return running;
+    const conflict = results.find(r => r.portConflict);
+    if (conflict) return conflict;
+    lastResult = results[0];
     if (i < attempts - 1) await sleep(retryDelayMs);
   }
   return lastResult;
