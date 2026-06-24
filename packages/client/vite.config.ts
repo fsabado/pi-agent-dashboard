@@ -11,6 +11,7 @@ import os from "node:os";
 // the runtime ships raw .ts (no compiled dist) and Node can't resolve
 // `.js`-extensioned internal imports back to `.ts` at runtime.
 import { viteDashboardPluginsPlugin } from "../dashboard-plugin-runtime/src/vite-plugin/index.js";
+import { frontmanPlugin } from '@frontman-ai/vite';
 
 /**
  * Resolve the dashboard HTTP port for Vite proxy targets.
@@ -62,6 +63,7 @@ const DASHBOARD_PORT = resolveDashboardPort();
 
 export default defineConfig({
   plugins: [
+    frontmanPlugin({ host: 'localhost:4000' }),
     react(),
     tailwindcss(),
     viteDashboardPluginsPlugin(path.resolve(__dirname, "../..")),
@@ -88,7 +90,7 @@ export default defineConfig({
         manualChunks(id: string) {
           const chunks: Record<string, string[]> = {
             "react-vendor": ["react", "react-dom"],
-            "markdown": ["react-markdown", "remark-gfm", "rehype-raw", "dompurify"],
+            "markdown": ["react-markdown", "remark-gfm", "rehype-raw", "dompurify", "remark-math", "rehype-katex", "katex"],
             "syntax": ["react-syntax-highlighter"],
             "diff": [
               "@git-diff-view/core",
@@ -123,10 +125,10 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
   },
   server: {
-    port: 3000,
+    port: 8000,
     hmr: {
       // HMR WebSocket must connect directly to Vite's port, not the dashboard's.
-      clientPort: 3000,
+      clientPort: 8000,
     },
     proxy: {
       "/api": `http://localhost:${DASHBOARD_PORT}`,

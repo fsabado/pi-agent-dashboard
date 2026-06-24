@@ -1,37 +1,33 @@
 /**
- * Middle-truncate a filesystem path to fit within maxLen characters.
- * Preserves leading segments and the last segment (directory name),
- * replacing omitted middle segments with "…".
+ * Tail-truncate a filesystem path to fit within maxLen characters.
+ * Preserves the last 2 path segments (parent dir + final dir name),
+ * replacing the omitted prefix with "…".
  *
- * Example: truncatePathMiddle("/Users/robson/Project/some/deep/judo-meta-esm", 35)
- *        → "/Users/robson/Project…/judo-meta-esm"
+ * Examples:
+ *   truncatePathMiddle("/mnt/custom-file-systems/efs-04bf/pr-application", 40)
+ *     → "…/efs-04bf/pr-application"
+ *
+ *   truncatePathMiddle("/Users/robson/Project/some/deep/judo-meta-esm", 40)
+ *     → "…/deep/judo-meta-esm"
  */
 export function truncatePathMiddle(path: string, maxLen: number): string {
   if (!path || path.length <= maxLen) return path;
 
   const segments = path.split("/");
   // segments[0] is "" for absolute paths (leading /)
-
-  // If only root + one segment (e.g., "/judo-ng"), return as-is
   if (segments.length <= 2) return path;
 
   const last = segments[segments.length - 1];
-  const ellipsis = "…";
+  const parent = segments[segments.length - 2];
 
-  // Build prefix by adding segments until we'd exceed budget
-  // Budget = maxLen - ellipsis(1) - slash(1) - last segment length
-  const budget = maxLen - ellipsis.length - 1 - last.length;
-  if (budget <= 0) {
-    // Can't even fit prefix + ellipsis + last — return untruncated
-    return path;
-  }
+  // Prefer keeping 2 tail segments: "…/parent/last"
+  const twoSeg = `…/${parent}/${last}`;
+  if (twoSeg.length <= maxLen) return twoSeg;
 
-  let prefix = "";
-  for (let i = 0; i < segments.length - 1; i++) {
-    const next = i === 0 ? segments[i] : prefix + "/" + segments[i];
-    if (next.length > budget) break;
-    prefix = next;
-  }
+  // Fall back to just last segment: "…/last"
+  const oneSeg = `…/${last}`;
+  if (oneSeg.length <= maxLen) return oneSeg;
 
-  return prefix + ellipsis + "/" + last;
+  // Pathological: even that is too long — return untruncated
+  return path;
 }

@@ -4,6 +4,7 @@ import { useThemeContext } from "../ThemeProvider.js";
 import { getSyntaxTheme } from "../../lib/syntax-theme.js";
 import type { ToolRendererProps } from "./types.js";
 import { OpenFileButton } from "./OpenFileButton.js";
+import { HtmlChipStrip } from "./HtmlChipStrip.js";
 import { detectLanguage } from "./lang-detect.js";
 import { t as i18nT } from "../../lib/i18n";
 
@@ -46,6 +47,8 @@ export function WriteToolRenderer({ args, status, result, context }: ToolRendere
       {result && status !== "running" && (
         <div className="text-xs text-[var(--text-tertiary)] italic">{result}</div>
       )}
+
+      <HtmlChipStrip text={filePath ?? ""} cwd={context.cwd} />
     </div>
   );
 }

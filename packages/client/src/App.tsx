@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
 import { useRoute, useLocation, useSearchParams, Redirect, Switch, Route } from "wouter";
 import { useWebSocket } from "./hooks/useWebSocket.js";
 import { setInitSender } from "./lib/worktree-init-bus.js";
@@ -23,9 +23,10 @@ import { SessionBanner } from "./components/SessionBanner.js";
 import { MarkdownPreviewView } from "./components/MarkdownPreviewView.js";
 import { PreviewOverlayView } from "./components/PreviewOverlayView.js";
 import { PiResourcesView } from "./components/PiResourcesView.js";
-import { SpecsBrowserView } from "./components/SpecsBrowserView.js";
-import { ArchiveBrowserView } from "./components/ArchiveBrowserView.js";
-import { OpenSpecBoardView } from "./components/OpenSpecBoardView.js";
+// Lazy — route-level views only rendered when their URL matches.
+const SpecsBrowserView = lazy(() => import("./components/SpecsBrowserView.js").then((m) => ({ default: m.SpecsBrowserView })));
+const ArchiveBrowserView = lazy(() => import("./components/ArchiveBrowserView.js").then((m) => ({ default: m.ArchiveBrowserView })));
+const OpenSpecBoardView = lazy(() => import("./components/OpenSpecBoardView.js").then((m) => ({ default: m.OpenSpecBoardView })));
 import { WorktreeSpawnDialog } from "./components/WorktreeSpawnDialog.js";
 import { maybeAutoInitWorktreeOnSpawn } from "./lib/auto-init-worktree.js";
 import { useOpenSpecReader } from "./hooks/useOpenSpecReader.js";
@@ -50,7 +51,7 @@ import { Icon } from "@mdi/react";
 import { mdiRefresh } from "@mdi/js";
 import { useOpenSpecConfig } from "./lib/openspec-config-api.js";
 import { LandingPage } from "./components/LandingPage.js";
-import { SettingsPanel } from "./components/SettingsPanel.js";
+const SettingsPanel = lazy(() => import("./components/SettingsPanel.js").then((m) => ({ default: m.SettingsPanel })));
 import { ZrokInstallGuide } from "./components/ZrokInstallGuide.js";
 import { InstallBanner } from "./components/InstallBanner.js";
 
@@ -61,7 +62,9 @@ import { useInstallPrompt } from "./hooks/useInstallPrompt.js";
 import { TerminalsView } from "./components/TerminalsView.js";
 import { EditorView } from "./components/EditorView.js";
 import { decodeFolderPath, encodeFolderPath } from "./lib/folder-encoding.js";
-import { FileDiffView } from "./components/FileDiffView.js";
+// Lazy — only loaded when the user opens the diff view.
+// Defers the diff chunk (342 KB gz) from the initial parse.
+const FileDiffView = lazy(() => import("./components/FileDiffView.js").then((m) => ({ default: m.FileDiffView })));
 // SubagentPopoutPage no longer imported by the shell — it's registered via
 // the subagents-plugin's `shell-overlay-route` claim and mounted through
 // `<ShellOverlayRouteSlot>` below. See change: add-flow-agent-popout.
@@ -1213,7 +1216,7 @@ export default function App() {
   // Full-page OpenSpec board overlay element. Shared across the three overlay
   // render sites (desktop + responsive layouts). See change: redesign-openspec-board.
   const openspecBoardOverlay = openspecBoardMatch && openspecBoardCwd ? (
-    <OpenSpecBoardView
+    <Suspense fallback={null}><OpenSpecBoardView
       cwd={openspecBoardCwd}
       data={openspecMap.get(openspecBoardCwd) ?? { initialized: false, pending: false, changes: [], hasOpenspecDir: false }}
       sessions={Array.from(sessions.values())}
@@ -1238,7 +1241,7 @@ export default function App() {
       isGitRepo={Array.from(sessions.values()).some((s) => s.cwd === openspecBoardCwd && !!s.gitBranch)}
       gitWorktreeEnabled={gitWorktreeEnabled}
       selectedId={selectedId}
-    />
+    /></Suspense>
   ) : null;
 
   const connectionBanner = (
@@ -1388,9 +1391,9 @@ export default function App() {
       {openspecBoardMatch && openspecBoardCwd ? (
         openspecBoardOverlay
       ) : archiveMatch && archiveCwd ? (
-        <ArchiveBrowserView cwd={archiveCwd} onBack={goBack} />
+        <Suspense fallback={null}><Suspense fallback={null}><Suspense fallback={null}><ArchiveBrowserView cwd={archiveCwd} onBack={goBack} /></Suspense></Suspense></Suspense>
       ) : specsMatch && specsCwd ? (
-        <SpecsBrowserView cwd={specsCwd} onBack={goBack} />
+        <Suspense fallback={null}><Suspense fallback={null}><Suspense fallback={null}><SpecsBrowserView cwd={specsCwd} onBack={goBack} /></Suspense></Suspense></Suspense>
       ) : piResourceFileMatch && piResourceFilePath ? (
         <PiResourceFileRoute
           filePath={piResourceFilePath}
@@ -1422,7 +1425,9 @@ export default function App() {
           onBack={goBack}
         />
       ) : diffMatch && diffSessionId ? (
-        <FileDiffView sessionId={diffSessionId} onBack={goBack} />
+        <Suspense fallback={null}>
+          <FileDiffView sessionId={diffSessionId} onBack={goBack} />
+        </Suspense>
       ) : (
         <>
           {/* Plugin slot: content-header-sticky — contributions from
@@ -1769,7 +1774,7 @@ export default function App() {
           }
           detailPanel={
             settingsMatch ? (
-              <SettingsPanel onMessage={onMessage} onBack={goBack} />
+              <Suspense fallback={null}><SettingsPanel onMessage={onMessage} onBack={goBack} /></Suspense>
             ) : tunnelSetupMatch ? (
               <ZrokInstallGuide onBack={goBack} />
             ) : pluginOverlayMatched ? (
@@ -1786,7 +1791,9 @@ export default function App() {
             ) : specsMatch && specsCwd ? (
               <SpecsBrowserView cwd={specsCwd} onBack={goBack} />
             ) : diffMatch && diffSessionId ? (
-              <FileDiffView sessionId={diffSessionId} onBack={goBack} />
+              <Suspense fallback={null}>
+                <FileDiffView sessionId={diffSessionId} onBack={goBack} />
+              </Suspense>
             ) : piResourceFileMatch && piResourceFilePath ? (
               <PiResourceFileRoute
                 filePath={piResourceFilePath}
@@ -1956,7 +1963,7 @@ export default function App() {
             )
           )
         )}
-        {settingsMatch && <SettingsPanel availableModels={(() => {
+        {settingsMatch && <Suspense fallback={null}><SettingsPanel availableModels={(() => {
           const seen = new Set<string>();
           const models: Array<{ provider: string; id: string }> = [];
           for (const list of modelsMap.values()) {
@@ -1966,7 +1973,7 @@ export default function App() {
             }
           }
           return models;
-        })()} onMessage={onMessage} onBack={goBack} />}
+        })()} onMessage={onMessage} onBack={goBack} /></Suspense>}
         {tunnelSetupMatch && <ZrokInstallGuide onBack={goBack} />}
       </div>
       {boardWorktreeForChange && (

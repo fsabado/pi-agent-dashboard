@@ -1,7 +1,8 @@
 import React from "react";
 import type { ToolRendererProps } from "./types.js";
 import { LinkifiedText } from "./LinkifiedText.js";
-import { ToolResultImages } from "./ToolResultImages.js";
+import { ImageChipStrip } from "./ImageChipStrip.js";
+import { HtmlChipStrip } from "./HtmlChipStrip.js";
 import { t as i18nT } from "../../lib/i18n";
 
 /**
@@ -10,19 +11,21 @@ import { t as i18nT } from "../../lib/i18n";
  * The args JSON block above is NOT linkified — it renders verbatim.
  * The result block runs through `LinkifiedText` so URLs and file
  * references become clickable. See change: linkify-tool-output.
+ * Image paths in the result are rendered as attachment chips below
+ * the text. See change: chatview-inline-image-paths.
  */
-export function GenericToolRenderer({ args, result, images, context }: ToolRendererProps) {
-  const hasImages = images && images.length > 0;
+export function GenericToolRenderer({ args, result, context }: ToolRendererProps) {
   return (
     <div className="space-y-2">
       <pre className="text-code text-[var(--text-secondary)]">{JSON.stringify(args, null, 2)}</pre>
-      {hasImages && <ToolResultImages images={images!} />}
       {result && (
         <>
           <div className="text-[var(--text-tertiary)] font-medium text-xs">{i18nT("auto.output", undefined, "Output:")}</div>
           <pre className="whitespace-pre-wrap text-code text-[var(--text-secondary)]">
             <LinkifiedText text={result} context={context} />
           </pre>
+          <ImageChipStrip text={result} />
+          <HtmlChipStrip text={result} cwd={context.cwd} />
         </>
       )}
     </div>
