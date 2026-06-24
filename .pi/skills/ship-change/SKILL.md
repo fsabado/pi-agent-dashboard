@@ -1,6 +1,6 @@
 ---
 name: ship-change
-description: Ship an OpenSpec change after openspec-apply completes. When only QA/manual tasks remain, marks them done (tested later), archives + syncs specs, commits, pushes, opens a PR against develop, watches CI, waits for CodeRabbit, auto-applies safe fixes and re-pushes, loops until CI green + no actionable review threads, then squash-merges with branch delete and removes the worktree. Use after implementation is done and the change is ready to land. Triggers: "ship this change", "ship it", "land the change", "merge and clean up", "post-apply ship".
+description: "Ship an OpenSpec change after openspec-apply completes. When only QA/manual tasks remain, marks them done (tested later), archives + syncs specs, commits, pushes, opens a PR against develop, watches CI, waits for CodeRabbit, auto-applies safe fixes and re-pushes, loops until CI green + no actionable review threads, then squash-merges with branch delete and removes the worktree. Use after implementation is done and the change is ready to land. Triggers: ship this change, ship it, land the change, merge and clean up, post-apply ship."
 metadata:
   version: "1.0"
   scope: project

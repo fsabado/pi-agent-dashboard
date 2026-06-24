@@ -30,3 +30,13 @@ site/.astro/
 playwright-report/
 test-results/
 .playwright/
+# Runtime auto-spawn files
+auto.engine
+auto.pid
+auto.sock
+auto.stream
+auto.version
+# Local screenshots / scratch images
+images/
+# In-progress OpenSpec changes
+openspec/changes/*/
