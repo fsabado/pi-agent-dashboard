@@ -134,6 +134,8 @@ export interface DashboardSession {
   contextTokens?: number | null;
   contextWindow?: number;
   sessionFile?: string;
+  /** Absolute path of the parent session file for forked sessions. Absent for root sessions. */
+  parentSessionFile?: string;
   sessionDir?: string;
   hidden?: boolean;
   firstMessage?: string;

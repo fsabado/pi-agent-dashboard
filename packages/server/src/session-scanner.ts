@@ -4,7 +4,7 @@
  * Falls back to `.jsonl` parsing for sessions without cached meta.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve, dirname } from "node:path";
 import os from "node:os";
 import type { DashboardSession, SessionSource } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 import { type SessionMeta, metaPath, readSessionMeta, writeSessionMeta } from "@blackbelt-technology/pi-dashboard-shared/session-meta.js";
@@ -244,11 +244,32 @@ export function scanAllSessions(sessionsDir?: string): ScanResult {
     }
   }
 
+  // Patch parentSessionFile onto each session that has a parentSession header.
+  // Done as a post-processing step to avoid touching each push site.
+  for (const session of sessions) {
+    if (session.sessionFile) {
+      const parentFile = readParentSessionFile(session.sessionFile);
+      if (parentFile) (session as DashboardSession).parentSessionFile = parentFile;
+    }
+  }
+
   return { sessions, cacheUpdates };
 }
 
+/** Read only the `parentSession` field from the first line of a .jsonl file (cheap). */
+function readParentSessionFile(sessionFile: string): string | undefined {
+  try {
+    const first = readFileSync(sessionFile, "utf-8").split("\n")[0];
+    const header = JSON.parse(first);
+    if (typeof header.parentSession === "string") {
+      return resolve(dirname(sessionFile), header.parentSession);
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
+
 /** Synchronous JSONL header reader (used during scan) */
-function readJsonlHeaderSync(filePath: string): { id: string; cwd: string; name?: string; firstMessage?: string } | null {
+function readJsonlHeaderSync(filePath: string): { id: string; cwd: string; name?: string; firstMessage?: string; parentSession?: string } | null {
   try {
     const content = readFileSync(filePath, "utf-8");
     let header: any = null;
@@ -280,7 +301,13 @@ function readJsonlHeaderSync(filePath: string): { id: string; cwd: string; name?
     }
 
     if (!header) return null;
-    return { id: header.id, cwd: header.cwd ?? "", name, firstMessage };
+    return {
+      id: header.id,
+      cwd: header.cwd ?? "",
+      name,
+      firstMessage,
+      parentSession: typeof header.parentSession === "string" ? header.parentSession : undefined,
+    };
   } catch {
     return null;
   }
