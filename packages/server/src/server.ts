@@ -55,6 +55,7 @@ import { setWindowsGitSourceSetting } from "@blackbelt-technology/pi-dashboard-s
 import { registerSessionApi } from "./session-api.js";
 import { registerManifestRoute } from "./routes/manifest-route.js";
 import { registerSessionRoutes } from "./routes/session-routes.js";
+import { registerSessionTreeRoutes } from "./routes/session-tree-routes.js";
 import { registerGitRoutes } from "./routes/git-routes.js";
 import { registerFileRoutes } from "./routes/file-routes.js";
 import { registerOpenSpecRoutes } from "./routes/openspec-routes.js";
@@ -803,6 +804,7 @@ export async function createServer(config: ServerConfig): Promise<DashboardServe
   const networkGuard = createNetworkGuard(config.resolvedTrustedNetworks ?? []);
 
   registerSessionRoutes(fastify, { sessionManager, eventStore, networkGuard });
+registerSessionTreeRoutes(fastify, { networkGuard });
   registerGitRoutes(fastify, { networkGuard, sessionManager, browserGateway, worktreeInitRegistry });
 
   // Browser channel for worktree-init event subscriptions. The dialog
