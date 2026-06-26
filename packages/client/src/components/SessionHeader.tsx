@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@mdi/react";
-import { mdiPencilOutline, mdiArrowLeft, mdiPaperclip, mdiRefresh, mdiLinkOff, mdiPlay, mdiFileCompare, mdiHeadLightbulb, mdiViewGridOutline, mdiPlayCircleOutline, mdiSourceFork } from "@mdi/js";
+import { mdiPencilOutline, mdiArrowLeft, mdiPaperclip, mdiRefresh, mdiLinkOff, mdiPlay, mdiFileCompare, mdiHeadLightbulb, mdiViewGridOutline, mdiPlayCircleOutline, mdiSourceFork, mdiSourceBranch } from "@mdi/js";
 import { ComboPill } from "./ComboPill.js";
 import type { DashboardSession, OpenSpecChange, CommandInfo, ImageContent } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 import type { SessionState } from "../lib/event-reducer.js";
@@ -31,6 +31,8 @@ interface Props {
   onDetachProposal?: () => void;
   hasFileChanges?: boolean;
   onOpenDiffView?: () => void;
+  onToggleSessionTree?: () => void;
+  sessionTreeOpen?: boolean;
   onRefresh?: () => void;
   /** Open the artifact reader for an attached change. Wired into the
    *  ArtifactLettersButton rendered in both desktop and mobile headers.
@@ -459,6 +461,20 @@ export function SessionHeader({ session, state, onRename, showBack, onBack, mobi
           data-testid="open-extension-modules"
         >
           <Icon path={mdiViewGridOutline} size={0.4} className="inline mr-0.5" />{i18nT("auto.modules", undefined, "Modules")}
+        </button>
+      )}
+      {onToggleSessionTree && (
+        <button
+          onClick={onToggleSessionTree}
+          title={sessionTreeOpen ? "Hide session tree" : "Show session tree"}
+          data-testid="session-tree-toggle"
+          className={`p-1.5 rounded transition-colors mr-1 ${
+            sessionTreeOpen
+              ? "text-[var(--text-primary)] bg-[var(--bg-tertiary)]"
+              : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          <Icon path={mdiSourceBranch} size={0.6} />
         </button>
       )}
       {hasFileChanges && onOpenDiffView && (

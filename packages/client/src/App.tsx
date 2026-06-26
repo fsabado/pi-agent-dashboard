@@ -4,10 +4,12 @@ import { useWebSocket } from "./hooks/useWebSocket.js";
 import { setInitSender } from "./lib/worktree-init-bus.js";
 import { dispatchPluginMessage } from "./lib/plugins-api.js";
 import { useSidebarState } from "./hooks/useSidebarState.js";
+import { useSessionTreePane } from "./hooks/useSessionTreePane.js";
 import { useDocumentTitle } from "./hooks/useDocumentTitle.js";
 import { useAppHidden } from "./hooks/useAppHidden.js";
 import { SessionList } from "./components/SessionList.js";
 import { ResizableSidebar } from "./components/ResizableSidebar.js";
+import { SessionTreePane } from "./components/session-tree/SessionTreePane.js";
 import { HamburgerButton, MobileOverlay } from "./components/MobileOverlay.js";
 import { MobileShell } from "./components/MobileShell.js";
 import { SpawnErrorToastHost } from "./components/SpawnErrorToastHost.js";
@@ -385,6 +387,7 @@ export default function App() {
   const folderTermCwd = folderTermMatch ? decodeFolderPath(folderTermParams?.encodedCwd ?? "") : null;
   const folderEditorCwd = folderEditorMatch ? decodeFolderPath(folderEditorParams?.encodedCwd ?? "") : null;
   const sidebar = useSidebarState();
+  const sessionTreePane = useSessionTreePane();
   const chatViewRef = useRef<ChatViewHandle>(null);
   const isMobile = useMobile();
   const installPrompt = useInstallPrompt();
@@ -921,6 +924,12 @@ export default function App() {
   // change: pluginize-flows-via-registry.
 
   const selectedSession = selectedId ? sessions.get(selectedId) : undefined;
+  const resolveSessionId = useCallback((file: string): string | undefined => {
+    for (const [id, session] of sessions) {
+      if (session.sessionFile === file) return id;
+    }
+    return undefined;
+  }, [sessions]);
   // Per-cwd OpenSpec workflow config — drives which action buttons render.
   // See change: redesign-session-card-and-composer (config-driven-workflow).
   const openspecConfig = useOpenSpecConfig(selectedSession?.cwd);
@@ -1197,9 +1206,10 @@ export default function App() {
       onDismissSpawnError={(cwd) => setSpawnErrors((prev) => { const next = new Map(prev); next.delete(cwd); return next; })}
       resumeErrors={resumeErrors}
       onDismissResumeError={(id) => setResumeErrors((prev) => { const next = new Map(prev); next.delete(id); return next; })}
+      compact={sidebar.isCompact}
       headerExtra={
         <div className="flex items-center gap-2">
-          {launchSource !== "electron" && <PiUpdateBadge />}
+          {launchSource !== "electron" && !sidebar.isCompact && <PiUpdateBadge />}
           <ServerSelector
             currentHost={currentServerHost}
             currentPort={currentServerPort}
@@ -1207,6 +1217,7 @@ export default function App() {
             onSwitch={handleServerSwitch}
             inFlightSwitchKey={inFlightSwitchKey}
             onManageServers={() => navigate("/settings/remote")}
+            compact={sidebar.isCompact}
           />
         </div>
       }
@@ -1313,6 +1324,8 @@ export default function App() {
         hasFileChanges={selectedState.hasFileChanges}
         onOpenDiffView={() => navigate(buildSessionDiffUrl(selectedId))}
         onOpenExtensionModulePicker={() => setExtensionModulePickerOpen(true)}
+        onToggleSessionTree={selectedSession?.sessionFile ? sessionTreePane.toggle : undefined}
+        sessionTreeOpen={sessionTreePane.open}
         onRefresh={() => {
           setSessionStates((prev) => {
             const next = new Map(prev);
@@ -1388,6 +1401,8 @@ export default function App() {
           />
         );
       })()}
+      <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
       {openspecBoardMatch && openspecBoardCwd ? (
         openspecBoardOverlay
       ) : archiveMatch && archiveCwd ? (
@@ -1634,6 +1649,19 @@ export default function App() {
           })()}
         </>
       )}
+        </div>
+        {selectedSession?.sessionFile && (
+          <div className="hidden md:flex">
+            <SessionTreePane
+              sessionFile={selectedSession.sessionFile}
+              pane={sessionTreePane}
+              rootSessionId={selectedId!}
+              resolveSessionId={resolveSessionId}
+              send={send}
+            />
+          </div>
+        )}
+      </div>
     </div>
   ) : null;
 
