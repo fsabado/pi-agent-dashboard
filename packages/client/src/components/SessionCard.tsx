@@ -655,7 +655,8 @@ export function SessionCard({
           isSelected
             ? "border-blue-500/60 bg-blue-500/5"
             : "border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:border-[var(--border-secondary)]"
-        } ${isHidden ? "opacity-40" : ""} ${pulseClass}${depth > 0 ? " ml-3 border-l-purple-500/30" : ""}`}
+        } ${isHidden ? "opacity-40" : ""} ${pulseClass}`}
+        style={depth > 0 ? { marginLeft: "12px", borderLeftWidth: "2px", borderLeftColor: "rgba(168,85,247,0.3)" } : undefined}
         data-testid="session-card-desktop"
       >
         {stripeFxClass ? <div className={`card-stripes-fx ${stripeFxClass}`} aria-hidden="true" /> : null}
@@ -693,7 +694,8 @@ export function SessionCard({
         isSelected
           ? "border-blue-500/60 bg-blue-500/5 ring-1 ring-blue-500/30 card-selected-ring"
           : "border-[var(--border-subtle)] bg-[var(--bg-tertiary)]"
-      } ${isHidden ? "opacity-40" : ""} ${session.closing ? "opacity-50" : ""} ${pulseClass}${depth > 0 ? " ml-3 border-l-2 border-l-purple-500/30" : ""}`}
+      } ${isHidden ? "opacity-40" : ""} ${session.closing ? "opacity-50" : ""} ${pulseClass}`}
+      style={depth > 0 ? { marginLeft: "12px", borderLeftWidth: "2px", borderLeftColor: "rgba(168,85,247,0.3)" } : undefined}
       data-testid="session-card-desktop"
     >
       {isSelected ? <div className="card-glow-fx card-glow-fx-outer" aria-hidden="true" /> : null}
