@@ -156,6 +156,8 @@ interface Props {
   onOpenEditor?: (cwd: string) => void;
   editorStatuses?: Map<string, { id: string; status: import("@blackbelt-technology/pi-dashboard-shared/editor-types.js").EditorInstanceStatus }>;
   editorAvailable?: boolean;
+  /** Compact mode: hides non-essential folder sections and condenses session cards */
+  compact?: boolean;
   /** Extra content rendered in the sidebar header toolbar */
   headerExtra?: React.ReactNode;
   /** Set of session IDs that have an active error */
@@ -205,7 +207,7 @@ function ToggleButton({
   );
 }
 
-export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, openspecMap, openspecGroupsMap, sessionOrderMap, onReorderSessions, onSendPrompt, onOpenSpecRefresh, onAttachProposal, onDetachProposal, onReplaceProposal, onBulkArchive, onReadArtifact, onOpenPiResources, onRename, onShutdown, onResume, onResumeKeepPosition, onHideSession, onUnhideSession, onSpawnSession, spawningCwds, addSpawningCwd, clearSpawningCwd, spawnResult, onSpawnResultSeen, pinnedDirectories, onPinDirectory, onOpenPinDialog, onUnpinDirectory, onReorderPinnedDirs, onReorderWorkspaces, onReorderWorkspaceFolders, workspaces, onCreateWorkspace, onRenameWorkspace, onDeleteWorkspace, onSetWorkspaceCollapsed, onAddFolderToWorkspace, onRemoveFolderFromWorkspace, terminals, onKillTerminal, onRenameTerminal, onCollapseSidebar, commandsMap, onKillProcess, onSetProcessDrawer, inflightBashMap, onAbortTool, onOpenSpecs, onOpenArchive, onOpenBoard, onOpenTerminals, onOpenEditor, editorStatuses, editorAvailable, headerExtra, errorSessionIds, retrySessionIds, spawnErrors, onDismissSpawnError, resumeErrors, onDismissResumeError, gitWorktreeEnabled: gitWorktreeEnabledProp }: Props) {
+export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, openspecMap, openspecGroupsMap, sessionOrderMap, onReorderSessions, onSendPrompt, onOpenSpecRefresh, onAttachProposal, onDetachProposal, onReplaceProposal, onBulkArchive, onReadArtifact, onOpenPiResources, onRename, onShutdown, onResume, onResumeKeepPosition, onHideSession, onUnhideSession, onSpawnSession, spawningCwds, addSpawningCwd, clearSpawningCwd, spawnResult, onSpawnResultSeen, pinnedDirectories, onPinDirectory, onOpenPinDialog, onUnpinDirectory, onReorderPinnedDirs, onReorderWorkspaces, onReorderWorkspaceFolders, workspaces, onCreateWorkspace, onRenameWorkspace, onDeleteWorkspace, onSetWorkspaceCollapsed, onAddFolderToWorkspace, onRemoveFolderFromWorkspace, terminals, onKillTerminal, onRenameTerminal, onCollapseSidebar, commandsMap, onKillProcess, onSetProcessDrawer, inflightBashMap, onAbortTool, onOpenSpecs, onOpenArchive, onOpenBoard, onOpenTerminals, onOpenEditor, editorStatuses, editorAvailable, headerExtra, errorSessionIds, retrySessionIds, spawnErrors, onDismissSpawnError, resumeErrors, onDismissResumeError, gitWorktreeEnabled: gitWorktreeEnabledProp, compact }: Props) {
   const { t } = useI18n();
   // UI preference flag, default-on. Gates folder `+Worktree` and per-change
   // `⥂2+` buttons. See change: openspec-worktree-spawn-button.
@@ -692,10 +694,10 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             />
           </div>
           {/* Plugin slot: sidebar-folder-section (additive, coexists with FolderOpenSpecSection) */}
-          <SidebarFolderSectionSlot folder={{ cwd: group.cwd }} />
+          {!compact && <SidebarFolderSectionSlot folder={{ cwd: group.cwd }} />}
           {/* Render for both initialized (full section) and pending (spinner).
               See change: fix-cold-boot-openspec-protocol. */}
-          {(openspecMap?.get(group.cwd)?.initialized || openspecMap?.get(group.cwd)?.pending) && (
+          {!compact && (openspecMap?.get(group.cwd)?.initialized || openspecMap?.get(group.cwd)?.pending) && (
             <FolderOpenSpecSection
               data={openspecMap.get(group.cwd)!}
               cwd={group.cwd}
@@ -850,6 +852,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
                         selectedId={selectedId}
                         onSelect={onSelect}
                         now={now}
+                        compact={compact}
                         showGitInfo={group.sessions.length === 1}
                         isHidden={!!session.hidden}
                         onHide={handleHide}
@@ -957,7 +960,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
               <PiLogo size={24} />
             </button>
             <ThemePicker />
-            <ThemeToggle />
+            {!compact && <ThemeToggle />}
           </div>
           <div className="flex gap-1 items-center">
             <InstallButton canInstall={installPrompt.canInstall} isInstalled={installPrompt.isInstalled} prompt={installPrompt.prompt} />
@@ -995,7 +998,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between px-3 py-1.5 gap-2 bg-[var(--bg-secondary)]" data-testid="header-filter-bar">
+        <div className={`flex items-center justify-between gap-1.5 bg-[var(--bg-secondary)] ${compact ? "px-2 py-1" : "px-3 py-1.5"}`} data-testid="header-filter-bar">
           <input
             type="search"
             value={workspaceFilter}
