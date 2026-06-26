@@ -384,6 +384,7 @@ export function SessionCard({
   onAbortTool,
   hasError,
   isRetrying,
+  compact,
 }: {
   session: DashboardSession;
   selectedId?: string;
@@ -479,6 +480,8 @@ export function SessionCard({
   hasError?: boolean;
   /** True iff a synthesized provider retry is in flight (retryState set, no error yet). */
   isRetrying?: boolean;
+  /** Compact mode: condensed single-row layout for narrow sidebar */
+  compact?: boolean;
 }) {
   // dnd-kit drag handle props (attributes + listeners) supplied by
   // SortableSessionCard via context. When non-null, the desktop card's left
@@ -635,6 +638,46 @@ export function SessionCard({
           now={now}
           onNavigateToSession={onSelect}
         />
+      </li>
+    );
+  }
+
+  // Compact mode: condensed single-row card
+  if (compact) {
+    return (
+      <li
+        data-session-id={session.id}
+        onClick={() => onSelect(session.id)}
+        className={`group relative flex items-center gap-1.5 px-2 py-1.5 cursor-pointer rounded-lg border transition-colors ${
+          isSelected
+            ? "border-blue-500/60 bg-blue-500/5"
+            : "border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:border-[var(--border-secondary)]"
+        } ${isHidden ? "opacity-40" : ""} ${pulseClass}`}
+        data-testid="session-card-desktop"
+      >
+        {stripeFxClass ? <div className={`card-stripes-fx ${stripeFxClass}`} aria-hidden="true" /> : null}
+        <span
+          className={`relative z-10 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full flex-shrink-0 ${iconStatusColor}`}
+          data-testid="session-status-icon"
+        >
+          <Icon path={sourceIcons[session.source] ?? mdiConsoleLine} size={0.4} />
+        </span>
+        <span className="text-xs truncate flex-1 min-w-0">
+          {getSessionDisplayName(session)}
+        </span>
+        <span className="text-[10px] flex-shrink-0">
+          <ActivityIndicator session={session} />
+        </span>
+        {session.cost != null && session.cost > 0 && (
+          <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0">${session.cost.toFixed(2)}</span>
+        )}
+        <button
+          className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-red-400 flex-shrink-0 transition-opacity p-0.5"
+          onClick={(e) => { e.stopPropagation(); isHidden ? onUnhide(session.id) : onHide(session.id); }}
+          title={isHidden ? "Show" : "Hide"}
+        >
+          <Icon path={mdiEyeOffOutline} size={0.4} />
+        </button>
       </li>
     );
   }

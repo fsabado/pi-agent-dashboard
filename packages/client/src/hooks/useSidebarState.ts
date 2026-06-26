@@ -5,6 +5,8 @@ const COLLAPSED_KEY = "dashboard:sidebar-collapsed";
 const DEFAULT_WIDTH = 500;
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 500;
+export const COMPACT_WIDTH = 240;
+export const COMPACT_THRESHOLD = 260;
 
 function clamp(value: number): number {
   return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, value));
@@ -34,8 +36,10 @@ function readBoolean(key: string, fallback: boolean): boolean {
 export interface SidebarState {
   width: number;
   collapsed: boolean;
+  isCompact: boolean;
   setWidth: (w: number) => void;
   toggleCollapse: () => void;
+  cycleState: () => void;
 }
 
 export function useSidebarState(): SidebarState {
@@ -56,7 +60,30 @@ export function useSidebarState(): SidebarState {
     });
   }, []);
 
-  return { width, collapsed, setWidth, toggleCollapse };
+  // 3-state cycle: wide → compact → collapsed → wide
+  const cycleState = useCallback(() => {
+    if (collapsed) {
+      // collapsed → wide (restore to a proper wide width)
+      const stored = readNumber(WIDTH_KEY, DEFAULT_WIDTH);
+      const target = stored > COMPACT_THRESHOLD ? stored : DEFAULT_WIDTH;
+      setCollapsed(false);
+      setWidthRaw(target);
+      try { localStorage.setItem(COLLAPSED_KEY, "false"); } catch { /* noop */ }
+      try { localStorage.setItem(WIDTH_KEY, String(target)); } catch { /* noop */ }
+    } else if (width <= COMPACT_THRESHOLD) {
+      // compact → collapsed
+      setCollapsed(true);
+      try { localStorage.setItem(COLLAPSED_KEY, "true"); } catch { /* noop */ }
+    } else {
+      // wide → compact
+      setWidthRaw(COMPACT_WIDTH);
+      try { localStorage.setItem(WIDTH_KEY, String(COMPACT_WIDTH)); } catch { /* noop */ }
+    }
+  }, [collapsed, width]);
+
+  const isCompact = !collapsed && width <= COMPACT_THRESHOLD;
+
+  return { width, collapsed, isCompact, setWidth, toggleCollapse, cycleState };
 }
 
 // Exported for testing

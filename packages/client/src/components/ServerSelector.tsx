@@ -34,9 +34,11 @@ interface Props {
   onManageServers?: () => void;
   /** "host:port" of an in-flight staging switch; shows a spinner on that entry. */
   inFlightSwitchKey?: string | null;
+  /** Compact mode: show icon + status dot only, no label text */
+  compact?: boolean;
 }
 
-export function ServerSelector({ currentHost, currentPort, connected, onSwitch, onManageServers, inFlightSwitchKey }: Props) {
+export function ServerSelector({ currentHost, currentPort, connected, onSwitch, onManageServers, inFlightSwitchKey, compact }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const [availability, setAvailability] = useState<Map<string, boolean>>(new Map());
@@ -118,9 +120,9 @@ export function ServerSelector({ currentHost, currentPort, connected, onSwitch, 
         title={i18nT("auto.switch_server", undefined, "Switch server")}
       >
         <Icon path={mdiServerNetwork} size={0.55} />
-        <span className="truncate max-w-[180px]">{displayLabel}</span>
+        {!compact && <span className="truncate max-w-[180px]">{displayLabel}</span>}
         <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
-        <Icon path={mdiChevronDown} size={0.45} />
+        {!compact && <Icon path={mdiChevronDown} size={0.45} />}
       </button>
 
       {open && (
