@@ -1,8 +1,13 @@
 // packages/server/src/routes/session-tree-routes.ts
-import { watch } from "node:fs";
+import { watch, readFileSync } from "node:fs";
+import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { NetworkGuard } from "./route-deps.js";
 import type { ApiResponse } from "@blackbelt-technology/pi-dashboard-shared/types.js";
+import { loadConfig } from "@blackbelt-technology/pi-dashboard-shared/config.js";
+import type { PendingForkRegistry } from "../pending-fork-registry.js";
+import type { SessionManager } from "../memory-session-manager.js";
+import { spawnPiSession } from "../process-manager.js";
 import {
   buildSessionTreeState,
   forkSessionAfterEntry,
@@ -12,7 +17,11 @@ import {
 
 export function registerSessionTreeRoutes(
   fastify: FastifyInstance,
-  deps: { networkGuard: NetworkGuard },
+  deps: {
+    networkGuard: NetworkGuard;
+    pendingForkRegistry?: PendingForkRegistry;
+    sessionManager?: SessionManager;
+  },
 ) {
   const { networkGuard } = deps;
 
@@ -112,6 +121,72 @@ export function registerSessionTreeRoutes(
         reply.code(400);
         return { success: false, error: e instanceof Error ? e.message : String(e) } satisfies ApiResponse;
       }
+    },
+  );
+
+  // POST /api/session-tree/fork-and-spawn
+  fastify.post<{ Body: { sessionFile?: string; entryId?: string; name?: string; parentSessionId?: string } }>(
+    "/api/session-tree/fork-and-spawn",
+    { preHandler: networkGuard },
+    async (request, reply) => {
+      const { sessionFile, entryId, name, parentSessionId } = request.body ?? {};
+      if (!sessionFile || !entryId) {
+        reply.code(400);
+        return { success: false, error: "sessionFile and entryId required" } satisfies ApiResponse;
+      }
+
+      // 1. Create the fork .jsonl file
+      let forkResult: { sessionFile: string };
+      try {
+        forkResult = forkSessionAfterEntry(sessionFile, entryId, name);
+      } catch (e) {
+        reply.code(400);
+        return { success: false, error: e instanceof Error ? e.message : String(e) } satisfies ApiResponse;
+      }
+
+      // 2. Determine cwd — session manager first, fall back to reading header
+      const cwd = (() => {
+        if (deps.sessionManager && parentSessionId) {
+          const sessions = deps.sessionManager.list();
+          const parent = sessions.find((s) => s.id === parentSessionId);
+          if (parent?.cwd) return parent.cwd;
+        }
+        try {
+          const first = readFileSync(sessionFile, "utf-8").split("\n")[0];
+          const header = JSON.parse(first) as { cwd?: string };
+          return header.cwd ?? null;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (!cwd) {
+        reply.code(400);
+        return { success: false, error: "Could not determine cwd for fork" } satisfies ApiResponse;
+      }
+
+      // 3. Spawn pi in rpc mode with the fork file
+      const config = loadConfig();
+      const spawnResult = await spawnPiSession(cwd, {
+        sessionFile: forkResult.sessionFile,
+        mode: "fork",
+        strategy: config.spawnStrategy,
+      });
+
+      // 4. Record fork for left-pane ordering
+      if (parentSessionId && deps.pendingForkRegistry && spawnResult.spawnToken) {
+        deps.pendingForkRegistry.recordFork(spawnResult.spawnToken, parentSessionId);
+      }
+
+      if (!spawnResult.success) {
+        reply.code(500);
+        return { success: false, error: spawnResult.message } satisfies ApiResponse;
+      }
+
+      return {
+        success: true,
+        data: { forkSessionFile: forkResult.sessionFile, spawnToken: spawnResult.spawnToken },
+      } satisfies ApiResponse;
     },
   );
 
