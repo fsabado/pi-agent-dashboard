@@ -147,7 +147,7 @@ export function registerSessionTreeRoutes(
       // 2. Determine cwd — session manager first, fall back to reading header
       const cwd = (() => {
         if (deps.sessionManager && parentSessionId) {
-          const sessions = deps.sessionManager.list();
+          const sessions = deps.sessionManager.listAll();
           const parent = sessions.find((s) => s.id === parentSessionId);
           if (parent?.cwd) return parent.cwd;
         }
