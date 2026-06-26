@@ -831,7 +831,7 @@ export async function createServer(config: ServerConfig): Promise<DashboardServe
   const networkGuard = createNetworkGuard(config.resolvedTrustedNetworks ?? []);
 
   registerSessionRoutes(fastify, { sessionManager, eventStore, networkGuard });
-registerSessionTreeRoutes(fastify, { networkGuard });
+  registerSessionTreeRoutes(fastify, { networkGuard });
   registerGitRoutes(fastify, { networkGuard, sessionManager, browserGateway, worktreeInitRegistry });
 
   // Browser channel for worktree-init event subscriptions. The dialog
