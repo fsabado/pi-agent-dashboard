@@ -388,6 +388,7 @@ export default function App() {
   const folderEditorCwd = folderEditorMatch ? decodeFolderPath(folderEditorParams?.encodedCwd ?? "") : null;
   const sidebar = useSidebarState();
   const sessionTreePane = useSessionTreePane();
+  const [sessionTreeState, setSessionTreeState] = useState<import("./hooks/useSessionTree.js").SessionTreeState | null>(null);
   const chatViewRef = useRef<ChatViewHandle>(null);
   const isMobile = useMobile();
   const installPrompt = useInstallPrompt();
@@ -930,6 +931,11 @@ export default function App() {
     }
     return undefined;
   }, [sessions]);
+
+  const handleSwitchBranch = useCallback((sessionFile: string) => {
+    const id = resolveSessionId(sessionFile);
+    if (id) navigate(`/session/${id}`);
+  }, [resolveSessionId, navigate]);
   // Per-cwd OpenSpec workflow config — drives which action buttons render.
   // See change: redesign-session-card-and-composer (config-driven-workflow).
   const openspecConfig = useOpenSpecConfig(selectedSession?.cwd);
@@ -1326,6 +1332,8 @@ export default function App() {
         onOpenExtensionModulePicker={() => setExtensionModulePickerOpen(true)}
         onToggleSessionTree={selectedSession?.sessionFile ? sessionTreePane.toggle : undefined}
         sessionTreeOpen={sessionTreePane.open}
+        sessionTreeState={sessionTreeState}
+        onSwitchBranch={handleSwitchBranch}
         onRefresh={() => {
           setSessionStates((prev) => {
             const next = new Map(prev);
@@ -1657,7 +1665,8 @@ export default function App() {
               pane={sessionTreePane}
               rootSessionId={selectedId!}
               resolveSessionId={resolveSessionId}
-              send={send}
+              onStateChange={setSessionTreeState}
+              onSwitchToSession={handleSwitchBranch}
             />
           </div>
         )}

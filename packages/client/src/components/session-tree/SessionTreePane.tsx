@@ -2,11 +2,11 @@ import React, { useRef, useCallback, useEffect, useState } from "react";
 import { Icon } from "@mdi/react";
 import { mdiChevronLeft, mdiChevronRight } from "@mdi/js";
 import type { SessionTreePaneState } from "../../hooks/useSessionTreePane.js";
-import { useSessionTree } from "../../hooks/useSessionTree.js";
+import { useSessionTree, type SessionTreeState } from "../../hooks/useSessionTree.js";
 import { SessionTreeSidebar } from "./SessionTreeSidebar.js";
 import { SessionTreeMessages } from "./SessionTreeMessages.js";
 import { SessionTreeHeader } from "./SessionTreeHeader.js";
-import { SessionTreeComposer } from "./SessionTreeComposer.js";
+import { SessionTreeActionBar } from "./SessionTreeActionBar.js";
 
 const COLLAPSED_WIDTH = 28;
 
@@ -15,14 +15,15 @@ export interface SessionTreePaneProps {
   pane: SessionTreePaneState;
   rootSessionId: string;
   resolveSessionId: (sessionFile: string) => string | undefined;
-  send: (msg: { type: string; [key: string]: unknown }) => void;
+  onStateChange?: (state: SessionTreeState | null) => void;
+  onSwitchToSession?: (sessionFile: string) => void;
 }
 
 export function SessionTreePane({
-  sessionFile, pane, rootSessionId, resolveSessionId, send,
+  sessionFile, pane, rootSessionId, resolveSessionId, onStateChange, onSwitchToSession,
 }: SessionTreePaneProps) {
   const { open, width, toggle, setWidth } = pane;
-  const { state, loading, error, stale, refetch } = useSessionTree(open ? sessionFile : undefined);
+  const { state, loading, error, stale, refetch } = useSessionTree(sessionFile);
   const dragging = useRef(false);
   const paneRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +31,9 @@ export function SessionTreePane({
   const [activeEntryId, setActiveEntryId] = useState("");
   const [showThinking, setShowThinking] = useState(true);
   const [showTools, setShowTools] = useState(true);
+
+  // Bubble tree state up so header branch switcher can read it
+  useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!open) return;
@@ -71,10 +75,14 @@ export function SessionTreePane({
     const selectedNode = state?.nodes.find(n => n.id === selectedNodeId);
     if (!selectedNode) return;
     try {
-      const r = await fetch("/api/session-tree/fork", {
+      const r = await fetch("/api/session-tree/fork-and-spawn", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionFile: selectedNode.sessionFile, entryId }),
+        body: JSON.stringify({
+          sessionFile: selectedNode.sessionFile,
+          entryId,
+          parentSessionId: rootSessionId,
+        }),
       });
       const payload = await r.json() as { success: boolean; error?: string };
       if (!payload.success) throw new Error(payload.error);
@@ -83,6 +91,12 @@ export function SessionTreePane({
       alert(`Fork failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
+
+  const handleNavigateNode = useCallback((nodeId: string) => {
+    const node = state?.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    onSwitchToSession?.(node.sessionFile);
+  }, [state, onSwitchToSession]);
 
   const handleTruncate = async (entryId: string) => {
     if (!confirm("Delete all conversation after this message? This rewrites the session file.")) return;
@@ -177,14 +191,20 @@ export function SessionTreePane({
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {loading && !state && (
+        {loading && !state && !error && (
           <div className="flex-1 flex items-center justify-center text-[var(--text-tertiary)] text-xs">
             Loading…
           </div>
         )}
         {error && (
-          <div className="flex-1 flex items-center justify-center text-red-400 text-xs p-4 text-center">
-            {error}
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-xs p-4 text-center">
+            <span className="text-red-400">{error}</span>
+            <button
+              onClick={refetch}
+              className="px-3 py-1 text-[10px] rounded border border-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-primary)] transition-colors"
+            >
+              Retry
+            </button>
           </div>
         )}
         {state && (
@@ -210,6 +230,7 @@ export function SessionTreePane({
                     setActiveEntryId(entryId);
                   }}
                   onDeleteBranch={handleDeleteBranch}
+                  onNavigateNode={onSwitchToSession ? handleNavigateNode : undefined}
                 />
               </div>
               {/* Transcript + composer */}
@@ -224,9 +245,15 @@ export function SessionTreePane({
                     onTruncate={handleTruncate}
                   />
                 </div>
-                <SessionTreeComposer
-                  sessionId={resolvedSessionId}
-                  send={send}
+                <SessionTreeActionBar
+                  selectedNode={selectedNode}
+                  selectedSession={selectedSession}
+                  activeEntryId={activeEntryId}
+                  resolvedSessionId={resolvedSessionId}
+                  onFork={handleFork}
+                  onTruncate={handleTruncate}
+                  onDeleteBranch={handleDeleteBranch}
+                  onNavigate={onSwitchToSession && selectedNode ? () => onSwitchToSession(selectedNode.sessionFile) : undefined}
                 />
               </div>
             </div>

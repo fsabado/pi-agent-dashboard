@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Icon } from "@mdi/react";
-import { mdiDeleteOutline } from "@mdi/js";
+import { mdiDeleteOutline, mdiSourceBranch, mdiArrowRight } from "@mdi/js";
 import type { SessionTreeState, EntryView } from "../../hooks/useSessionTree.js";
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   activeEntryId: string;
   onSelect: (nodeId: string, entryId: string) => void;
   onDeleteBranch: (nodeId: string) => void;
+  onNavigateNode?: (nodeId: string) => void;
 }
 
 function entryText(entry: EntryView): string {
@@ -16,27 +17,18 @@ function entryText(entry: EntryView): string {
     .replace(/[\n\t]/g, " ").trim();
 }
 
-function roleColor(role?: string): string {
-  if (role === "user") return "text-teal-400";
-  if (role === "assistant") return "text-green-400";
-  if (role === "system") return "text-[var(--text-tertiary)]";
-  return "text-purple-400";
-}
-
 function trunc(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max) + "…";
 }
 
-type SidebarRow =
-  | { kind: "fork"; nodeId: string; depth: number; title: string }
-  | { kind: "entry"; nodeId: string; entryId: string; entry: EntryView; depth: number };
+type Row =
+  | { kind: "fork-label"; nodeId: string; depth: number; title: string; isRoot: boolean }
+  | { kind: "entry"; nodeId: string; entryId: string; entry: EntryView; depth: number; isLast: boolean; hasBranchAfter: boolean };
 
-export function SessionTreeSidebar({
-  state, selectedNodeId, activeEntryId, onSelect, onDeleteBranch,
-}: Props) {
+export function SessionTreeSidebar({ state, selectedNodeId, activeEntryId, onSelect, onDeleteBranch, onNavigateNode }: Props) {
   const [hoveredFork, setHoveredFork] = useState<string | null>(null);
 
-  const rows: SidebarRow[] = [];
+  const rows: Row[] = [];
 
   function collect(nodeId: string, depth: number) {
     const node = state.nodes.find(n => n.id === nodeId);
@@ -45,7 +37,7 @@ export function SessionTreeSidebar({
     if (!session) return;
 
     if (nodeId !== "ROOT") {
-      rows.push({ kind: "fork", nodeId, depth, title: node.title });
+      rows.push({ kind: "fork-label", nodeId, depth, title: node.title, isRoot: false });
     }
 
     const startIndex = (() => {
@@ -74,12 +66,18 @@ export function SessionTreeSidebar({
 
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      rows.push({ kind: "entry", nodeId, entryId: entry.id, entry, depth });
-      for (const child of children) {
-        if (child.anchorEntryId === entry.id || child.firstChildEntryId === entry.id) {
-          renderedChildren.add(child.id);
-          collect(child.id, depth + 1);
-        }
+      // Find children that branch off this entry
+      const branchingChildren = children.filter(
+        c => c.anchorEntryId === entry.id || c.firstChildEntryId === entry.id
+      );
+      const hasBranchAfter = branchingChildren.length > 0;
+      const isLast = i === entries.length - 1 && !hasBranchAfter;
+
+      rows.push({ kind: "entry", nodeId, entryId: entry.id, entry, depth, isLast, hasBranchAfter });
+
+      for (const child of branchingChildren) {
+        renderedChildren.add(child.id);
+        collect(child.id, depth + 1);
       }
     }
 
@@ -92,57 +90,117 @@ export function SessionTreeSidebar({
 
   return (
     <div className="py-1 text-[11px]">
-      {rows.map((row) => {
-        if (row.kind === "fork") {
+      {rows.map((row, rowIdx) => {
+        const RAIL_PX = 14; // px per depth level for the rail
+
+        if (row.kind === "fork-label") {
           const active = row.nodeId === selectedNodeId && !activeEntryId;
           return (
             <div
               key={`fork-${row.nodeId}`}
-              className={`relative flex items-baseline hover:bg-[var(--bg-hover)] ${active ? "bg-[var(--bg-tertiary)]" : ""}`}
+              className={`relative flex items-center hover:bg-[var(--bg-hover)] group ${active ? "bg-[var(--bg-tertiary)]" : ""}`}
+              style={{ paddingLeft: row.depth * RAIL_PX }}
               onMouseEnter={() => setHoveredFork(row.nodeId)}
               onMouseLeave={() => setHoveredFork(null)}
             >
+              {/* Vertical connector from parent rail */}
+              <div
+                className="absolute top-0 bottom-0 border-l-2 border-dashed border-purple-500/40"
+                style={{ left: row.depth * RAIL_PX - RAIL_PX / 2 }}
+              />
+              {/* Horizontal connector to label */}
+              <div
+                className="absolute top-1/2 border-t-2 border-dashed border-purple-500/40"
+                style={{ left: row.depth * RAIL_PX - RAIL_PX / 2, width: RAIL_PX / 2 }}
+              />
+              {/* Fork icon dot */}
+              <div className="w-4 h-4 flex items-center justify-center flex-shrink-0 z-10 relative">
+                <Icon path={mdiSourceBranch} size={0.45} className="text-purple-400" />
+              </div>
               <button
-                className="flex-1 text-left px-2 py-0.5 flex items-baseline gap-1"
+                className="flex-1 text-left px-1 py-0.5 truncate text-purple-400 font-medium"
                 onClick={() => onSelect(row.nodeId, "")}
               >
-                <span
-                  className="text-[var(--text-tertiary)] flex-shrink-0"
-                  style={{ paddingLeft: row.depth * 12 }}
-                >↳ </span>
-                <span className="text-purple-400 truncate">{row.title}</span>
+                {trunc(row.title, 32)}
               </button>
               {hoveredFork === row.nodeId && (
-                <button
-                  onClick={() => onDeleteBranch(row.nodeId)}
-                  className="px-1 py-0.5 text-[var(--text-tertiary)] hover:text-red-400 flex-shrink-0"
-                  title="Delete this branch"
-                >
-                  <Icon path={mdiDeleteOutline} size={0.5} />
-                </button>
+                <>
+                  {onNavigateNode && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onNavigateNode(row.nodeId); }}
+                      className="px-1 py-0.5 text-[var(--text-tertiary)] hover:text-blue-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Switch main view to this branch"
+                    >
+                      <Icon path={mdiArrowRight} size={0.5} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onDeleteBranch(row.nodeId)}
+                    className="px-1 py-0.5 text-[var(--text-tertiary)] hover:text-red-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete this branch"
+                  >
+                    <Icon path={mdiDeleteOutline} size={0.5} />
+                  </button>
+                </>
               )}
             </div>
           );
         }
 
+        // Entry row
         const active = row.nodeId === selectedNodeId && row.entryId === activeEntryId;
         const role = row.entry.role ?? row.entry.type;
+        const isUser = role === "user";
+        const isAssistant = role === "assistant";
         const text = entryText(row.entry);
+
+        // Dot color by role
+        const dotColor = isUser
+          ? "bg-teal-400"
+          : isAssistant
+          ? "bg-green-400"
+          : "bg-purple-400";
+
+        // Look ahead: does the next row continue the same node's rail?
+        const nextRow = rows[rowIdx + 1];
+        const railContinues = nextRow !== undefined;
 
         return (
           <button
             key={`${row.nodeId}-${row.entryId}`}
             onClick={() => onSelect(row.nodeId, row.entryId)}
-            className={`w-full text-left px-2 py-0.5 flex items-baseline gap-1 leading-4 hover:bg-[var(--bg-hover)] ${active ? "bg-[var(--bg-tertiary)] font-medium" : ""}`}
+            className={`relative w-full text-left flex items-start gap-1.5 py-0.5 pr-2 leading-4 hover:bg-[var(--bg-hover)] transition-colors ${active ? "bg-[var(--bg-tertiary)]" : ""}`}
+            style={{ paddingLeft: row.depth * RAIL_PX + 2 }}
           >
-            <span
-              className="text-[var(--text-tertiary)] flex-shrink-0 w-3 text-center"
-              style={{ paddingLeft: row.depth * 12 }}
-            >
-              {active ? "▸" : ""}
-            </span>
-            <span className={`${roleColor(role)} flex-shrink-0`}>{role}:</span>
-            <span className="text-[var(--text-secondary)] truncate">{trunc(text, 44) || "…"}</span>
+            {/* Vertical rail line */}
+            {railContinues && (
+              <div
+                className="absolute top-3 bottom-0 w-px bg-[var(--border-secondary)]"
+                style={{ left: row.depth * RAIL_PX + 6 }}
+              />
+            )}
+            {/* Branch-off horizontal tick when this entry has children */}
+            {row.hasBranchAfter && (
+              <div
+                className="absolute top-3 w-2 h-px bg-purple-500/40"
+                style={{ left: row.depth * RAIL_PX + 7 }}
+              />
+            )}
+
+            {/* Timeline dot */}
+            <div className="flex-shrink-0 mt-1.5 relative z-10">
+              <div className={`w-1.5 h-1.5 rounded-full ${active ? "ring-2 ring-offset-1 ring-[var(--bg-primary)]" : ""} ${dotColor}`} />
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <span className={`text-[9px] uppercase tracking-wide mr-1 ${isUser ? "text-teal-400" : isAssistant ? "text-green-400" : "text-purple-400"}`}>
+                {isUser ? "you" : isAssistant ? "ai" : role}
+              </span>
+              <span className={`text-[var(--text-secondary)] ${active ? "font-medium" : ""}`}>
+                {trunc(text, 38) || "…"}
+              </span>
+            </div>
           </button>
         );
       })}
