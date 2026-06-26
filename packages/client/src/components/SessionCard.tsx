@@ -385,6 +385,7 @@ export function SessionCard({
   hasError,
   isRetrying,
   compact,
+  depth = 0,
 }: {
   session: DashboardSession;
   selectedId?: string;
@@ -482,6 +483,8 @@ export function SessionCard({
   isRetrying?: boolean;
   /** Compact mode: condensed single-row layout for narrow sidebar */
   compact?: boolean;
+  /** Fork depth: 1 = direct fork child (indent + rail), 0 = root session */
+  depth?: number;
 }) {
   // dnd-kit drag handle props (attributes + listeners) supplied by
   // SortableSessionCard via context. When non-null, the desktop card's left
@@ -652,7 +655,7 @@ export function SessionCard({
           isSelected
             ? "border-blue-500/60 bg-blue-500/5"
             : "border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:border-[var(--border-secondary)]"
-        } ${isHidden ? "opacity-40" : ""} ${pulseClass}`}
+        } ${isHidden ? "opacity-40" : ""} ${pulseClass}${depth > 0 ? " ml-3 border-l-purple-500/30" : ""}`}
         data-testid="session-card-desktop"
       >
         {stripeFxClass ? <div className={`card-stripes-fx ${stripeFxClass}`} aria-hidden="true" /> : null}
@@ -690,7 +693,7 @@ export function SessionCard({
         isSelected
           ? "border-blue-500/60 bg-blue-500/5 ring-1 ring-blue-500/30 card-selected-ring"
           : "border-[var(--border-subtle)] bg-[var(--bg-tertiary)]"
-      } ${isHidden ? "opacity-40" : ""} ${session.closing ? "opacity-50" : ""} ${pulseClass}`}
+      } ${isHidden ? "opacity-40" : ""} ${session.closing ? "opacity-50" : ""} ${pulseClass}${depth > 0 ? " ml-3 border-l-2 border-l-purple-500/30" : ""}`}
       data-testid="session-card-desktop"
     >
       {isSelected ? <div className="card-glow-fx card-glow-fx-outer" aria-hidden="true" /> : null}
