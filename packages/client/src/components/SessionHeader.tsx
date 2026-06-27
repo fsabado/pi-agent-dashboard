@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@mdi/react";
-import { mdiPencilOutline, mdiArrowLeft, mdiPaperclip, mdiRefresh, mdiLinkOff, mdiPlay, mdiFileCompare, mdiHeadLightbulb, mdiViewGridOutline, mdiPlayCircleOutline, mdiSourceFork, mdiSourceBranch } from "@mdi/js";
+import { mdiPencilOutline, mdiArrowLeft, mdiPaperclip, mdiRefresh, mdiLinkOff, mdiPlay, mdiFileCompare, mdiHeadLightbulb, mdiViewGridOutline, mdiPlayCircleOutline, mdiSourceFork, mdiSourceBranch, mdiChevronDown } from "@mdi/js";
 import { ComboPill } from "./ComboPill.js";
 import type { DashboardSession, OpenSpecChange, CommandInfo, ImageContent } from "@blackbelt-technology/pi-dashboard-shared/types.js";
+import type { SessionTreeState } from "../hooks/useSessionTree.js";
 import type { SessionState } from "../lib/event-reducer.js";
 import type { DetectedEditor } from "../lib/editor-api.js";
 import { getSessionDisplayName } from "../lib/session-display-name.js";
@@ -33,6 +34,10 @@ interface Props {
   onOpenDiffView?: () => void;
   onToggleSessionTree?: () => void;
   sessionTreeOpen?: boolean;
+  /** Session tree state for branch switcher chip. When provided with sessionTreeNodes, renders a branch selector next to the tree toggle. */
+  sessionTreeState?: SessionTreeState | null;
+  /** Called when user picks a branch from the header chip. Receives the sessionFile of the target node. */
+  onSwitchBranch?: (sessionFile: string) => void;
   onRefresh?: () => void;
   /** Open the artifact reader for an attached change. Wired into the
    *  ArtifactLettersButton rendered in both desktop and mobile headers.
@@ -280,7 +285,8 @@ function formatDuration(ms: number): string {
   return `${seconds}s`;
 }
 
-export function SessionHeader({ session, state, onRename, showBack, onBack, mobileActions, commands, onSendPrompt, openspecChanges, onAttachProposal, onDetachProposal, hasFileChanges, onOpenDiffView, onToggleSessionTree, sessionTreeOpen, onRefresh, onReadArtifact, onOpenExtensionModulePicker, onResume }: Props) {
+export function SessionHeader({ session, state, onRename, showBack, onBack, mobileActions, commands, onSendPrompt, openspecChanges, onAttachProposal, onDetachProposal, hasFileChanges, onOpenDiffView, onToggleSessionTree, sessionTreeOpen, sessionTreeState, onSwitchBranch, onRefresh, onReadArtifact, onOpenExtensionModulePicker, onResume }: Props) {
+  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [isRenaming, setIsRenaming] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -463,6 +469,49 @@ export function SessionHeader({ session, state, onRename, showBack, onBack, mobi
           <Icon path={mdiViewGridOutline} size={0.4} className="inline mr-0.5" />{i18nT("auto.modules", undefined, "Modules")}
         </button>
       )}
+      {/* Branch switcher chip — shown when tree has forks */}
+      {sessionTreeState && sessionTreeState.nodes.length > 1 && onSwitchBranch && (() => {
+        const currentFile = session?.sessionFile ?? "";
+        const currentNode = sessionTreeState.nodes.find(n => n.sessionFile === currentFile);
+        const branchLabel = currentNode && currentNode.id !== "ROOT" ? currentNode.title : "main";
+        return (
+          <div className="relative mr-1">
+            <button
+              onClick={() => setBranchMenuOpen(v => !v)}
+              title="Switch branch"
+              className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 transition-colors"
+            >
+              <Icon path={mdiSourceBranch} size={0.4} className="flex-shrink-0" />
+              <span className="max-w-[80px] truncate">{branchLabel}</span>
+              <Icon path={mdiChevronDown} size={0.4} className="flex-shrink-0" />
+            </button>
+            {branchMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setBranchMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-w-[260px] bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-lg shadow-lg py-1 text-[11px]">
+                  {sessionTreeState.nodes.map(node => {
+                    const label = node.id === "ROOT" ? "main" : node.title;
+                    const isCurrent = node.sessionFile === currentFile;
+                    return (
+                      <button
+                        key={node.id}
+                        onClick={() => { onSwitchBranch(node.sessionFile); setBranchMenuOpen(false); }}
+                        className={`w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-[var(--bg-hover)] transition-colors ${
+                          isCurrent ? "text-purple-400 font-medium" : "text-[var(--text-secondary)]"
+                        }`}
+                      >
+                        <Icon path={mdiSourceBranch} size={0.4} className="flex-shrink-0 opacity-60" />
+                        <span className="truncate">{label}</span>
+                        {isCurrent && <span className="ml-auto text-[9px] text-[var(--text-tertiary)]">• current</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
       {onToggleSessionTree && (
         <button
           onClick={onToggleSessionTree}

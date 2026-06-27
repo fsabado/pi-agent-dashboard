@@ -23,7 +23,7 @@ export function ReadToolRenderer({ args, status, result, images, context }: Tool
   ].filter(Boolean).join(", ");
 
   return (
-    <div className="space-y-1">
+    <div data-testid="read-tool-renderer" className="space-y-1">
       <div className="flex items-center gap-2">
         <span className="text-xs text-[var(--text-secondary)] font-mono">{filePath ?? "file"}</span>
         {subtitle && <span className="text-[10px] text-[var(--text-muted)]">({subtitle})</span>}

@@ -34,4 +34,8 @@ jobs:
       - name: Biome static analysis (Tier A gate, warn-tier annotate)
         run: npx biome lint . --reporter=github
       - run: npm test
+      - name: Install Cypress
+        run: npx cypress install --force
+      - name: Cypress component tests
+        run: xvfb-run --auto-servernum npm run test:cypress
       - run: npm run build

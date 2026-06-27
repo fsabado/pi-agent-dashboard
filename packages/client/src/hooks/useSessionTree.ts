@@ -74,10 +74,13 @@ export function useSessionTree(sessionFile: string | undefined): UseSessionTreeR
     if (sessionFile) void fetchState(sessionFile);
   }, [sessionFile, fetchState]);
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!sessionFile) {
       setState(null); setError(null); setStale(false);
       esRef.current?.close(); esRef.current = null;
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
       return;
     }
 
@@ -85,7 +88,20 @@ export function useSessionTree(sessionFile: string | undefined): UseSessionTreeR
     setLoading(true);
     setStale(false);
 
-    void fetchState(sessionFile).finally(() => setLoading(false));
+    // Timeout: if no state after 8s, surface an error
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      setState(prev => {
+        if (!prev) setError(`Timed out loading tree for: ${sessionFile}`);
+        return prev;
+      });
+      setLoading(false);
+    }, 8000);
+
+    void fetchState(sessionFile).finally(() => {
+      setLoading(false);
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    });
     connect(sessionFile);
 
     return () => {
@@ -93,6 +109,10 @@ export function useSessionTree(sessionFile: string | undefined): UseSessionTreeR
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
   }, [sessionFile, fetchState, connect]);

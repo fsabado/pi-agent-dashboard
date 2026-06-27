@@ -10,7 +10,7 @@
 import React from "react";
 import { Icon } from "@mdi/react";
 import type { DashboardSession } from "@blackbelt-technology/pi-dashboard-shared/types.js";
-import { decoratorsOfKind } from "./decorator-utils.js";
+import { decoratorsOfKind } from "@blackbelt-technology/pi-dashboard-client-utils/extension-ui/decorator-utils";
 import { resolveMdiIcon } from "../../lib/mdi-icon-lookup.js";
 
 export function FooterSegmentSlot({ session }: { session: Pick<DashboardSession, "uiDecorators"> }) {

@@ -89,51 +89,54 @@ export function MissingRequiredBanner() {
   return (
     <div
       role="alert"
-      className="mx-2 my-2 p-3 bg-danger/10 border border-danger/40 rounded-lg flex items-start gap-3"
+      className="mx-2 my-2 p-3 bg-danger/10 border border-danger/40 rounded-lg"
       data-testid="missing-required-banner"
     >
-      <Icon path={mdiAlertCircle} size={0.9} className="text-danger flex-shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-danger">
-          {missing.length === 1
-            ? allOnDisk
-              ? `${missing[0].displayName} is installed but not active in pi`
-              : `${missing[0].displayName} is not installed`
-            : allOnDisk
-              ? `${missing.length} required extensions are installed but not active in pi`
-              : `${missing.length} required extensions are not installed`}
+      {/* title row: icon + text + dismiss */}
+      <div className="flex items-start gap-2">
+        <Icon path={mdiAlertCircle} size={0.75} className="text-danger flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-danger leading-snug">
+            {missing.length === 1
+              ? allOnDisk
+                ? `${missing[0].displayName} is installed but not active in pi`
+                : `${missing[0].displayName} is not installed`
+              : allOnDisk
+                ? `${missing.length} required extensions are installed but not active in pi`
+                : `${missing.length} required extensions are not installed`}
+          </div>
         </div>
-        <ul className="text-xs text-muted mt-1 space-y-0.5">
+        <button
+          onClick={onDismiss}
+          className="flex-shrink-0 p-0.5 -mt-0.5 -mr-0.5 rounded hover:bg-danger/10 text-muted"
+          data-testid="missing-required-dismiss"
+          aria-label={i18nT("auto.dismiss", undefined, "Dismiss")}
+        >
+          <Icon path={mdiClose} size={0.65} />
+        </button>
+      </div>
+      {/* body: description + install button */}
+      <div className="ml-[22px] mt-1.5">
+        <ul className="text-xs text-muted space-y-0.5">
           {missing.map((entry) => (
             <li key={entry.id}>
-              <strong>{entry.displayName}</strong>
               {entry.installed.scope && (
-                <> <span className="text-success">{i18nT("auto.on_disk", undefined, "(on disk:")} {entry.installed.scope})</span></>
+                <span className="text-success">{i18nT("auto.on_disk", undefined, "(on disk:")} {entry.installed.scope})</span>
               )}
               {entry.unlocks.length > 0 && (
-                <> {i18nT("auto.unlocks", undefined, "— unlocks:")} {entry.unlocks.join(", ")}</>
+                <>{i18nT("auto.unlocks", undefined, "Unlocks:")} {entry.unlocks.join(", ")}</>
               )}
             </li>
           ))}
         </ul>
-      </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={onAction}
           disabled={anyBusy}
-          className="text-xs px-2 py-1 rounded bg-danger text-white hover:bg-danger/80 flex items-center gap-1 disabled:opacity-50"
+          className="mt-2 text-xs px-3 py-1.5 rounded-md bg-danger text-white hover:bg-danger/80 flex items-center gap-1.5 font-medium disabled:opacity-50"
           data-testid="missing-required-install"
         >
           {anyBusy ? <Icon path={mdiLoading} size={0.6} spin /> : <Icon path={actionIcon} size={0.6} />}
-          {actionLabel}
-        </button>
-        <button
-          onClick={onDismiss}
-          className="text-xs p-1 rounded hover:bg-surface text-muted"
-          data-testid="missing-required-dismiss"
-          aria-label={i18nT("auto.dismiss", undefined, "Dismiss")}
-        >
-          <Icon path={mdiClose} size={0.7} />
+          {actionLabel}{missing.length === 1 ? ` ${missing[0].displayName}` : ""}
         </button>
       </div>
     </div>

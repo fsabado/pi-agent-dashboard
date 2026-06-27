@@ -16,7 +16,7 @@ export function WriteToolRenderer({ args, status, result, context }: ToolRendere
   const language = detectLanguage(filePath);
 
   return (
-    <div className="space-y-1">
+    <div data-testid="write-tool-renderer" className="space-y-1">
       <div className="flex items-center gap-2">
         <span className="text-xs text-[var(--text-secondary)] font-mono">{filePath ?? "file"}</span>
         <OpenFileButton filePath={filePath} context={context} />

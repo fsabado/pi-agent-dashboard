@@ -10,6 +10,48 @@
  *   truncatePathMiddle("/Users/robson/Project/some/deep/judo-meta-esm", 40)
  *     → "…/deep/judo-meta-esm"
  */
+
+/**
+ * Format a raw filesystem path for display in the folder header.
+ *
+ * Strips noisy mount prefixes (EFS/NFS FS IDs) and collapses home
+ * directories to `~` before truncating, so users see readable paths
+ * instead of opaque identifiers like `fs-04bf86d02daf87e14`.
+ *
+ * Priority:
+ *   1. EFS/NFS mounts  -- /mnt/{x}/efs/fs-<id>/... -> ~/...
+ *   2. Explicit home   -- strip home prefix -> ~/...
+ *   3. Generic home    -- /home/<user>/... or /Users/<user>/... -> ~/...
+ *   4. Anything else   -- passed through to truncatePathMiddle unchanged
+ *
+ * Examples:
+ *   formatFolderPath("/mnt/custom-file-systems/efs/fs-04bf/src/myapp")
+ *     -> "~/src/myapp"
+ *
+ *   formatFolderPath("/home/alice/projects/deep/nested/myapp")
+ *     -> "~/nested/myapp"
+ *
+ *   formatFolderPath("/Users/rob/dev/myapp", "/Users/rob")
+ *     -> "~/dev/myapp"
+ */
+export function formatFolderPath(path: string, home?: string): string {
+  if (!path) return path;
+  let p = path;
+
+  // 1. EFS / NFS mounts with opaque FS IDs: /mnt/*/efs/fs-<hexid>/…
+  const efsMatch = p.match(/^\/mnt\/[^/]*\/efs\/fs-[0-9a-f]+\/(.*)/);
+  if (efsMatch) {
+    p = `~/${efsMatch[1]}`;
+  // 2. Explicit home prefix
+  } else if (home && (p === home || p.startsWith(`${home}/`))) {
+    p = `~${p.slice(home.length)}`;
+  // 3. Generic Linux / macOS home pattern
+  } else {
+    p = p.replace(/^\/(?:home|Users)\/[^/]+\//, "~/");
+  }
+
+  return truncatePathMiddle(p, 40);
+}
 export function truncatePathMiddle(path: string, maxLen: number): string {
   if (!path || path.length <= maxLen) return path;
 

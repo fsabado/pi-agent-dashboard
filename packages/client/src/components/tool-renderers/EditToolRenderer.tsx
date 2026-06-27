@@ -176,7 +176,7 @@ export function EditToolRenderer({ args, status, result, toolDetails, context }:
   };
 
   return (
-    <div className="space-y-1">
+    <div data-testid="edit-tool-renderer" className="space-y-1">
       <div className="flex items-center gap-2">
         <span className="text-xs text-[var(--text-secondary)] font-mono">{filePath ?? "file"}</span>
         <OpenFileButton filePath={filePath} context={context} />

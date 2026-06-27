@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useId } from "react";
 import { useThemeContext } from "./ThemeProvider.js";
 import { useZoomPan } from "../hooks/useZoomPan.js";
-import { ZoomControls } from "./ZoomControls.js";
+import { ZoomControls } from "@blackbelt-technology/pi-dashboard-client-utils/ZoomControls";
 import { t as i18nT } from "../lib/i18n";
 
 let mermaidIdCounter = 0;

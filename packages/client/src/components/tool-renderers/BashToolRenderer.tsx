@@ -22,7 +22,7 @@ export function BashToolRenderer({ args, status, result, context }: ToolRenderer
   const timeout = args?.timeout as number | undefined;
 
   return (
-    <div className="space-y-1">
+    <div data-testid="bash-tool-renderer" className="space-y-1">
       <div className="flex items-start gap-2">
         <span className="text-xs text-[var(--accent-green)] font-mono">$</span>
         <span className="text-xs text-[var(--text-secondary)] font-mono whitespace-pre-wrap break-all">{command ?? "command"}</span>
@@ -36,7 +36,7 @@ export function BashToolRenderer({ args, status, result, context }: ToolRenderer
       {result && (
         <>
           <div className="max-h-80 overflow-auto rounded bg-[var(--bg-code)] p-2">
-            <pre className="whitespace-pre-wrap text-code font-mono">
+            <pre data-testid="bash-output" className="whitespace-pre-wrap text-code font-mono">
               <LinkifiedText text={stripAnsi(String(result))} context={context} />
             </pre>
           </div>

@@ -163,7 +163,7 @@ export function AskUserToolRenderer(props: ToolRendererProps) {
   const isComplete = status === "complete";
 
   return (
-    <div className="space-y-2">
+    <div data-testid="ask-user-tool-renderer" className="space-y-2">
       {/* Method badge */}
       <div className="flex items-center gap-1.5">
         <Icon path={icon} size={0.5} className="text-blue-400 shrink-0" />

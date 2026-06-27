@@ -37,10 +37,10 @@ import {
 import {
   buildGraph,
   computeToggleImpact,
+  SettingsSectionByPluginSlot,
 } from "@blackbelt-technology/dashboard-plugin-runtime";
 import { RECOMMENDED_EXTENSIONS } from "@blackbelt-technology/pi-dashboard-shared/recommended-extensions.js";
 import { usePackageOperations } from "../hooks/usePackageOperations.js";
-import { PluginSettingsHost } from "./PluginSettingsHost.js";
 import { getApiBase } from "../lib/api-context.js";
 import { t as i18nT } from "../lib/i18n";
 
@@ -621,7 +621,7 @@ export function PluginsSection() {
                     <Icon path={mdiCogOutline} size={0.5} />
                     {i18nT("auto.plugin_settings", undefined, "Plugin settings")}
                   </div>
-                  <PluginSettingsHost pluginId={row.id} />
+                  <SettingsSectionByPluginSlot pluginId={row.id} />
                 </div>
               )}
             </div>

@@ -1,0 +1,9 @@
+{
+  "extends": "../packages/client/tsconfig.json",
+  "compilerOptions": {
+    "types": ["cypress"],
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../packages/**/*.cy.tsx"]
+}

@@ -27,6 +27,7 @@ export function AgentCardShell({ name, status, headerRight, stats, onClick, sele
 
   return (
     <div
+      data-testid="agent-card-shell"
       onClick={onClick}
       className={`rounded-lg border p-2.5 transition-all duration-150 flex flex-col
         ${onClick ? "cursor-pointer hover:shadow-md" : ""}
@@ -37,8 +38,8 @@ export function AgentCardShell({ name, status, headerRight, stats, onClick, sele
     >
       {/* Header: icon + name + optional right content */}
       <div className="flex items-center gap-1.5">
-        <span className={`${color} inline-flex`}>{icon}</span>
-        <span className="text-sm font-medium text-[var(--text-primary)] truncate flex-1">{name}</span>
+        <span data-testid="agent-card-status-icon" className={`${color} inline-flex`}>{icon}</span>
+        <span data-testid="agent-card-name" className="text-sm font-medium text-[var(--text-primary)] truncate flex-1">{name}</span>
         {headerRight}
       </div>
 
