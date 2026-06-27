@@ -11,7 +11,6 @@ import os from "node:os";
 // the runtime ships raw .ts (no compiled dist) and Node can't resolve
 // `.js`-extensioned internal imports back to `.ts` at runtime.
 import { viteDashboardPluginsPlugin } from "../dashboard-plugin-runtime/src/vite-plugin/index.js";
-import { frontmanPlugin } from '@frontman-ai/vite';
 
 /**
  * Resolve the dashboard HTTP port for Vite proxy targets.
@@ -63,7 +62,6 @@ const DASHBOARD_PORT = resolveDashboardPort();
 
 export default defineConfig({
   plugins: [
-    frontmanPlugin({ host: 'localhost:4000' }),
     react(),
     tailwindcss(),
     viteDashboardPluginsPlugin(path.resolve(__dirname, "../..")),
