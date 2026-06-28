@@ -1,5 +1,12 @@
 import "./mount-with-providers.js";
 import "../../packages/client/src/index.css";
+import addContext from "mochawesome/addContext";
+
+// Attach spec video to every test so mochawesome renders it in the report.
+Cypress.on("test:after:run", (test, runnable) => {
+  const videoPath = `videos/${Cypress.spec.relative}.mp4`;
+  addContext({ test: runnable }, { title: "🎥 Recording", value: videoPath });
+});
 
 // Stub window.WebSocket globally — prevents real connection attempts
 // in component context. Components under test receive WS state as props.
