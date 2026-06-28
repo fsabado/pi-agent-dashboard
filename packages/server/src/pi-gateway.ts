@@ -2,10 +2,24 @@
  * Pi Gateway - WebSocket server for bridge extension connections.
  */
 import { WebSocketServer, WebSocket } from "ws";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
 import type { ExtensionToServerMessage, ServerToExtensionMessage } from "@blackbelt-technology/pi-dashboard-shared/protocol.js";
 import type { DashboardSession } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 import type { SessionManager } from "./memory-session-manager.js";
 import { getSpawnRegisterWatchdog } from "./spawn-register-watchdog.js";
+
+/** Read parentSession from the first line of a .jsonl file and resolve to absolute path. */
+function readParentSessionFile(sessionFile: string): string | undefined {
+  try {
+    const first = readFileSync(sessionFile, "utf-8").split("\n")[0];
+    const header = JSON.parse(first) as { parentSession?: string };
+    if (typeof header.parentSession === "string") {
+      return resolve(dirname(sessionFile), header.parentSession);
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
 
 export const HEARTBEAT_TIMEOUT = 180_000;
 export const WS_PING_INTERVAL = 60_000;
@@ -305,6 +319,7 @@ export function createPiGateway(
                 thinkingLevel: msg.thinkingLevel,
                 sessionFile: msg.sessionFile,
                 sessionDir: msg.sessionDir,
+                parentSessionFile: msg.sessionFile ? readParentSessionFile(msg.sessionFile) : undefined,
                 firstMessage: msg.firstMessage,
                 pid: msg.pid,
                 // Forward registerReason so server.ts onChange can apply

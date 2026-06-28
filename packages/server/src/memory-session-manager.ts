@@ -13,6 +13,7 @@ export interface RegisterSessionParams {
   thinkingLevel?: string;
   sessionFile?: string;
   sessionDir?: string;
+  parentSessionFile?: string;
   firstMessage?: string;
   startedAt?: number;
   pid?: number;
@@ -117,6 +118,7 @@ export function createMemorySessionManager(): SessionManager {
         endedAt: undefined,
         sessionFile: params.sessionFile,
         sessionDir: params.sessionDir,
+        parentSessionFile: params.parentSessionFile,
         // Auto-hide decision (single writer). On reattach (an already-known
         // session re-registering after a dashboard restart / reconnect) the
         // prior `hidden` is preserved so a manual unhide/hide survives. On

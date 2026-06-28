@@ -213,6 +213,22 @@ function ToggleButton({
   );
 }
 
+/**
+ * Build a depth map for fork sessions: sessions whose `parentSessionFile`
+ * matches another session in the same group get depth=1, all others depth=0.
+ * Uses the full group (all statuses) so fork children of active sessions
+ * still get depth=1 even when rendered in the ended tier.
+ */
+function buildForkDepthMap(allGroupSessions: DashboardSession[]): Map<string, number> {
+  const byFile = new Map(allGroupSessions.filter(s => s.sessionFile).map(s => [s.sessionFile!, s.id]));
+  const map = new Map<string, number>();
+  for (const session of allGroupSessions) {
+    const depth = session.parentSessionFile && byFile.has(session.parentSessionFile) ? 1 : 0;
+    map.set(session.id, depth);
+  }
+  return map;
+}
+
 export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, openspecMap, folderGitMap, openspecGroupsMap, sessionOrderMap, onReorderSessions, onSendPrompt, onOpenSpecRefresh, onAttachProposal, onDetachProposal, onReplaceProposal, onBulkArchive, onReadArtifact, onOpenPiResources, onRename, onShutdown, onResume, onResumeKeepPosition, onHideSession, onUnhideSession, onSpawnSession, spawningCwds, addSpawningCwd, clearSpawningCwd, spawnResult, onSpawnResultSeen, pinnedDirectories, onPinDirectory, onOpenPinDialog, onUnpinDirectory, onReorderPinnedDirs, onReorderWorkspaces, onReorderWorkspaceFolders, workspaces, onCreateWorkspace, onRenameWorkspace, onDeleteWorkspace, onSetWorkspaceCollapsed, onAddFolderToWorkspace, onRemoveFolderFromWorkspace, terminals, onKillTerminal, onRenameTerminal, onCollapseSidebar, commandsMap, onKillProcess, onSetProcessDrawer, inflightBashMap, onAbortTool, onOpenSpecs, onOpenArchive, onOpenBoard, onOpenTerminals, onOpenEditor, editorStatuses, editorAvailable, headerExtra, errorSessionIds, retrySessionIds, spawnErrors, onDismissSpawnError, resumeErrors, onDismissResumeError, gitWorktreeEnabled: gitWorktreeEnabledProp }: Props) {
   const { t } = useI18n();
   // UI preference flag, default-on. Gates folder `+Worktree` and per-change
@@ -852,6 +868,9 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
             }
             const sessionIds = visibleSessions.map((s) => s.id);
             const sessionMap = new Map(visibleSessions.map((s) => [s.id, s]));
+            // Build depth map from the full group (all statuses) so fork children
+            // of active sessions get depth=1 even when rendered in the ended tier.
+            const forkDepthMap = buildForkDepthMap(group.sessions);
             // `visibleSessions` is already in final render order — each tier
             // ordered by the stored flat order (status-partition), active
             // tier then ended tier. No further flat re-application (which
@@ -899,6 +918,7 @@ export function SessionList({ sessions, selectedId, onSelect, contextUsageMap, o
                     <SortableSessionCard key={id} id={id}>
                       <SessionCard
                         session={session}
+                        depth={forkDepthMap.get(id) ?? 0}
                         selectedId={selectedId}
                         onSelect={onSelect}
                         now={now}
