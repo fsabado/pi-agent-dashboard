@@ -48,7 +48,7 @@
       },
       {
         "slot": "content-header-sticky",
-        "component": "FlowArchitectClaim"
+        "component": "FlowSummaryClaim"
       },
       {
         "slot": "content-view",
@@ -63,7 +63,7 @@
       },
       {
         "slot": "shell-overlay-route",
-        "component": "FlowArchitectPopoutClaim",
+        "component": "FlowAgentPopoutClaim",
         "path": "/session/:sid/architect",
         "sessionParam": "sid"
       }
