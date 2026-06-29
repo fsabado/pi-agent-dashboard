@@ -4,11 +4,11 @@
  */
 import type {
   DashboardEvent,
+  FlowAgentCardConfig,
   FlowAgentState,
   FlowDetailEntry,
   FlowRecentTool,
   FlowState,
-  FlowAgentCardConfig,
   NodeKind,
 } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 
@@ -21,7 +21,6 @@ function stepTypeToNodeKind(stepType: string | undefined): NodeKind | undefined 
     case "code":
     case "code-decision":
     case "fork":
-    case "flow-ref":
       return stepType;
     default:
       return undefined;
@@ -104,8 +103,9 @@ export function reduceFlowEvent(
         stepType: string;
         agent?: string;
         blockedBy?: string[];
-        loopTarget?: string;
-        exitTarget?: string;
+        branches?: Record<string, string>;
+        onComplete?: string;
+        onError?: string;
       }> | undefined;
       const agents = new Map<string, FlowAgentState>();
       if (steps) {
@@ -128,14 +128,20 @@ export function reduceFlowEvent(
           }
         }
       }
-      // Store all steps for DAG graph (including non-agent types)
+      // Store all steps for DAG graph (including non-agent types). `branches`
+      // carries decision routing so the live graph can draw branch/loop edges;
+      // `onComplete`/`onError` carry forward/error routing so on_complete-wired
+      // flows draw `route` edges live (not just in the static Mermaid). Absent
+      // fields (older pi-flows) → no route edges, same as before.
+      // See change: fix-flow-ui-graph-zoom-summary.
       const dagSteps = steps?.map(step => ({
         id: step.id,
         stepType: step.stepType,
         agent: step.agent,
         blockedBy: step.blockedBy || [],
-        loopTarget: step.loopTarget,
-        exitTarget: step.exitTarget,
+        branches: step.branches,
+        onComplete: step.onComplete,
+        onError: step.onError,
       }));
 
       return {

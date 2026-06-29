@@ -2224,3 +2224,23 @@ Server-boot tests bind `port: 0` (OS-assigned) via `createTestServer()` / `httpP
 jsdom `localStorage` per-fork in-memory. Node `--localstorage-file` unused by node-env tests.
 
 Full `npm test` wall time ~8m27s → ~1m31s after parallelization.
+
+## Electron Auto-Update
+
+Runtime `packages/electron/src/lib/app-updater.ts`. Wraps `electron-updater`.
+
+Check schedule: `initAutoUpdater()` runs 60s initial check + 24h interval. Skipped in dev (`ELECTRON_DEV` set or no `resourcesPath`).
+
+Dialog flow: `autoDownload=false`. update-available dialog → on consent → `downloadUpdate()`. update-downloaded dialog → `quitAndInstall()` on Restart Now. `autoInstallOnAppQuit=true`.
+
+Error logging: `logUpdate()` writes `[updater]` lines to `app.getPath('logs')/electron-main.log`. `classifyUpdateError(err)` → severity tiers `debug` (update-not-available) / `warn` (network/other) / `error` (sha512/signature/parse). Error listener logs then forwards. Never swallowed.
+
+Manual trigger: app menu "Check for Updates…" → `checkForUpdatesNow()` → `ManualCheckResult`. "View Update Log" → `shell.showItemInFolder` on `getUpdateLogPath()`. Both hidden in dev (`isDevMode()`).
+
+Signing requirement: Squirrel.Mac needs Developer-ID signature + notarisation. Unsigned mac update rejected at apply. macOS signing stays in Forge (`CSC_IDENTITY_AUTO_DISCOVERY=false`).
+
+Publish-channel contract: electron-builder writes `app-update.yml` into package from `publish: github`. `latest.yml`/`latest-mac.yml`/`latest-linux.yml` metadata attached to release. Runtime feed + build feed agree by construction. `build-config-parity.test.ts` asserts publish stream parity across forge.config.ts + electron-builder.yml + electron-builder-nsis.json.
+
+Draft-vs-published gate: production tags `vX.Y.Z` publish so electron-updater `/releases/latest` resolves them. Pre-release tags `-rc.N` stay drafts → invisible to stable channel. publish.yml metadata-presence assertion fails release when installer ships without its `latest*.yml`.
+
+See change: fix-electron-auto-update-pipeline.

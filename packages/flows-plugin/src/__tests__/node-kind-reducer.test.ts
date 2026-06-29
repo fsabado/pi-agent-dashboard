@@ -4,9 +4,10 @@
  * branch from complete, soft/hard outcome, interrupted downgrade, pre-listed code
  * cards, and replay identity (same fold for live + persisted events).
  */
-import { describe, it, expect } from "vitest";
-import { reduceFlowEvent } from "../reducer.js";
+
 import type { DashboardEvent, FlowState } from "@blackbelt-technology/pi-dashboard-shared/types.js";
+import { describe, expect, it } from "vitest";
+import { reduceFlowEvent } from "../reducer.js";
 
 function ev(type: string, data: Record<string, unknown>): DashboardEvent {
   return { seq: 1, timestamp: 0, sessionId: "s1", eventType: type, data } as unknown as DashboardEvent;
@@ -99,6 +100,25 @@ describe("node-kind reducer", () => {
       ["flow_agent_started", { agentName: "a", stepId: "a" }], // no nodeKind
     ])!;
     expect(s.agents.get("a")?.nodeKind).toBe("agent");
+  });
+
+  it("lands on_complete / on_error onto dagSteps; absent fields stay undefined", () => {
+    // See change: fix-flow-ui-graph-zoom-summary — routing fields drive live route edges.
+    const s = fold([
+      ["flow_started", {
+        flowName: "invoice", task: "t",
+        steps: [
+          { id: "load-state", stepType: "code", blockedBy: [], onComplete: "resume-gate", onError: "hold" },
+          { id: "resume-gate", stepType: "code-decision", blockedBy: [], branches: { new: "intake" } },
+        ],
+      }],
+    ])!;
+    const loadState = s.dagSteps?.find(d => d.id === "load-state");
+    expect(loadState?.onComplete).toBe("resume-gate");
+    expect(loadState?.onError).toBe("hold");
+    const gate = s.dagSteps?.find(d => d.id === "resume-gate");
+    expect(gate?.onComplete).toBeUndefined();
+    expect(gate?.onError).toBeUndefined();
   });
 
   it("replays identically: same fold over persisted events rebuilds the same card", () => {

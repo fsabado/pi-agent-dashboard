@@ -91,7 +91,7 @@ import { loadWindowState, saveWindowState } from "./lib/window-state.js";
 import { createTray, destroyTray } from "./lib/tray.js";
 import { startUpdateChecker } from "./lib/update-checker.js";
 import { notifyUpdatesAvailable } from "./lib/update-notifier.js";
-import { initAutoUpdater, quitAndInstall } from "./lib/app-updater.js";
+import { initAutoUpdater, downloadAndInstall, quitAndInstall } from "./lib/app-updater.js";
 import { setupAppMenu } from "./lib/app-menu.js";
 import {
   selectLaunchSource,
@@ -303,10 +303,12 @@ function startUpdaters(): void {
         type: "info",
         title: "Update Available",
         message: `PI Dashboard v${version} is available.`,
-        buttons: ["Download & Restart", "Later"],
+        buttons: ["Download", "Later"],
         defaultId: 0,
       }).then(({ response }) => {
-        if (response === 0) quitAndInstall();
+        // autoDownload is disabled; consent triggers the download. The
+        // update-downloaded handler below applies it via quitAndInstall().
+        if (response === 0) downloadAndInstall();
       });
     },
     onUpdateDownloaded: (version) => {
@@ -320,7 +322,9 @@ function startUpdaters(): void {
         if (response === 0) quitAndInstall();
       });
     },
-    onError: () => { /* silently ignore update errors */ },
+    // Errors are logged with a severity tier inside app-updater's error
+    // listener (electron-main.log); no user-facing dialog for background checks.
+    onError: () => {},
   });
 }
 

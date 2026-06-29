@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import React from "react";
-import { ResizableSidebar } from "../ResizableSidebar.js";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SidebarState } from "../../hooks/useSidebarState.js";
+import { ResizableSidebar } from "../ResizableSidebar.js";
 
 afterEach(() => cleanup());
 
@@ -67,6 +66,23 @@ describe("ResizableSidebar", () => {
     );
     fireEvent.click(screen.getByTestId("sidebar-expand"));
     expect(sidebar.toggleCollapse).toHaveBeenCalledOnce();
+  });
+
+  it("floats the collapse/expand affordance above sticky content (z-30)", () => {
+    // The toggle overhangs into the content area where a sticky slot (z-10)
+    // would otherwise occlude it. See change: improve-flow-graph-fidelity.
+    const { rerender } = render(
+      <ResizableSidebar sidebar={makeSidebar()}>
+        <div>Content</div>
+      </ResizableSidebar>,
+    );
+    expect(screen.getByTestId("sidebar-collapse").className).toMatch(/z-30/);
+    rerender(
+      <ResizableSidebar sidebar={makeSidebar({ collapsed: true })}>
+        <div>Content</div>
+      </ResizableSidebar>,
+    );
+    expect(screen.getByTestId("sidebar-expand").className).toMatch(/z-30/);
   });
 
   it("calls setWidth on drag end", () => {

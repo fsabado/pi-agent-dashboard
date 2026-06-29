@@ -1,8 +1,9 @@
 /**
  * SessionFlowActions edit-mode gating + New/Edit launcher.
- * The New/Edit button shows only when editMode is on, and selecting a flow (or
- * "+ New flow") invokes onEditFlow(name|undefined) so the claim can send
- * `/skill:edit-flow [name]`. See change: rework-flows-plugin-for-new-pi-flows.
+ * The New/Edit button shows only when editMode is on. Selecting a flow (or
+ * "+ New flow") opens an intent-capture dialog; submitting it invokes
+ * onEditFlow(name|undefined, instruction) so the claim can send
+ * `/skill:manage-flows ...`. See change: rework-flows-plugin-for-new-pi-flows.
  */
 import React from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -18,6 +19,13 @@ import { SessionFlowActions } from "../client/SessionFlowActions.js";
 
 const registry = createUiPrimitiveRegistry();
 registerUiPrimitive(registry, UI_PRIMITIVE_KEYS.confirmDialog, (() => null) as never);
+// Stub Dialog primitive used by FlowAuthorPromptDialog: render children + Footer/Cancel.
+const Dialog = (({ children }: { children: React.ReactNode }) => <div>{children}</div>) as never;
+(Dialog as unknown as { Footer: React.FC<{ children: React.ReactNode }>; Cancel: React.FC<{ onClick: () => void }> }).Footer =
+  ({ children }) => <div>{children}</div>;
+(Dialog as unknown as { Footer: React.FC; Cancel: React.FC<{ onClick: () => void }> }).Cancel =
+  ({ onClick }) => <button onClick={onClick}>Cancel</button>;
+registerUiPrimitive(registry, UI_PRIMITIVE_KEYS.dialog, Dialog);
 // Stub SearchableSelectDialog: render each option as a button that selects it.
 registerUiPrimitive(
   registry,
@@ -60,19 +68,31 @@ describe("SessionFlowActions edit mode", () => {
     expect(getByTestId("flows-new-edit-button")).toBeTruthy();
   });
 
-  it("selecting an existing flow calls onEditFlow(name)", () => {
+  it("editing a flow prompts for an instruction, then calls onEditFlow(name, instruction)", () => {
     const onEditFlow = vi.fn();
     const { getByTestId, getByText } = renderActions({ editMode: true, onEditFlow });
     fireEvent.click(getByTestId("flows-new-edit-button"));
     fireEvent.click(getByText("invoice-research"));
-    expect(onEditFlow).toHaveBeenCalledWith("invoice-research");
+    // Intent dialog appears; edit instruction is optional → submit empty.
+    const submit = getByTestId("flow-author-submit");
+    expect(submit).toBeTruthy();
+    fireEvent.click(submit);
+    expect(onEditFlow).toHaveBeenCalledWith("invoice-research", "");
   });
 
-  it("selecting + New flow calls onEditFlow(undefined)", () => {
+  it("new flow requires a description before onEditFlow(undefined, text) fires", () => {
     const onEditFlow = vi.fn();
-    const { getByTestId, getByText } = renderActions({ editMode: true, onEditFlow });
+    const { getByTestId, getByText, getByPlaceholderText } = renderActions({ editMode: true, onEditFlow });
     fireEvent.click(getByTestId("flows-new-edit-button"));
     fireEvent.click(getByText("+ New flow"));
-    expect(onEditFlow).toHaveBeenCalledWith(undefined);
+    const submit = getByTestId("flow-author-submit") as HTMLButtonElement;
+    // Required: disabled until text entered.
+    expect(submit.disabled).toBe(true);
+    fireEvent.change(getByPlaceholderText(/Research an invoice/), {
+      target: { value: "Summarize PRs" },
+    });
+    expect(submit.disabled).toBe(false);
+    fireEvent.click(submit);
+    expect(onEditFlow).toHaveBeenCalledWith(undefined, "Summarize PRs");
   });
 });

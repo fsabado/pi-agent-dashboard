@@ -194,3 +194,32 @@ git push origin v<version>
 - Monitor GitHub Issues for install/upgrade regressions.
 - Leave `## [Unreleased]` empty-but-present so next contributor has
   obvious target.
+
+## Rollback: bad auto-update release
+
+Production tags `vX.Y.Z` publish immediately, not draft.
+Production releases ship `latest.yml`, `latest-mac.yml`, `latest-linux.yml`.
+electron-updater clients resolve `/releases/latest`.
+
+Stop NEW clients updating to bad release: flip release back to draft.
+
+```bash
+gh release edit v<version> --draft
+```
+
+Draft release excluded from `/releases/latest`.
+electron-updater stops resolving it.
+Unpublish via GitHub UI works too.
+
+Flip to draft does NOT recall update already downloaded or applied.
+Draft only prevents further clients resolving release.
+
+Supersede bad release clients already pulled: cut higher production tag `vX.Y.Z+1`.
+Clients update forward.
+Deletion alone does not roll clients back.
+
+Bad `latest*.yml` shipped (wrong sha512, missing file): re-cut corrected metadata under higher tag.
+Do not hand-edit release assets.
+sha512 in `latest*.yml` must match uploaded binary.
+
+Full revoke (delete release + tag + npm deprecate): use `release-revoke` skill.

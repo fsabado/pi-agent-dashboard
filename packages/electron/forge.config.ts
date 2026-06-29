@@ -12,10 +12,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const bundledNodePath = path.resolve(__dirname, "resources/node");
 const extraResource = fs.existsSync(bundledNodePath) ? [bundledNodePath] : [];
 
-// Read package version once at config-evaluation time. Used by the DMG
-// maker below to compose an arch-tagged artifact basename so each macOS
-// matrix leg lands a distinct release asset (see DMG maker comment).
-// See change: fix-darwin-dmg-arch-collision (D1).
+// Read package version once at config-evaluation time. Consumed by
+// deriveWindowsBuildVersion below to build the Windows PE VERSIONINFO triple.
 const pkgVersion: string = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8"),
 ).version;
@@ -87,6 +85,12 @@ const config: ForgeConfig = {
     ...(process.platform === "darwin" ? { arch: "universal" as any } : {}),
     extraResource: [
       ...extraResource,
+      // electron-updater reads app-update.yml from resourcesPath at runtime.
+      // electron-builder normally writes it during packaging, but our mac/linux
+      // build runs electron-builder in --prepackaged mode (which skips that
+      // phase), so we ship it as an extraResource instead. provider/owner/repo
+      // are static for this repo. See change: fix-electron-auto-update-pipeline.
+      "./resources/app-update.yml",
       "./src/renderer",
       "./resources/dirname-shim.js",
       // Tray icons for macOS (template images) and Windows/Linux
@@ -107,51 +111,21 @@ const config: ForgeConfig = {
       // ship as regular npm deps of the bundled server tree at
       // resources/server/node_modules/; no runtime cache extraction.
     ],
-    // macOS code signing — requires APPLE_IDENTITY env var in CI
-    ...(process.env.APPLE_IDENTITY ? {
-      osxSign: {
-        identity: process.env.APPLE_IDENTITY,
-        hardenedRuntime: true,
-        entitlements: "entitlements.plist",
-        "entitlements-inherit": "entitlements.plist",
-      },
-      osxNotarize: {
-        appleId: process.env.APPLE_ID || "",
-        appleIdPassword: process.env.APPLE_ID_PASSWORD || "",
-        teamId: process.env.APPLE_TEAM_ID || "",
-      },
-    } : {}),
+    // macOS signing + notarisation are owned by the `macos-notarization`
+    // change (split per fix-electron-auto-update-pipeline D4). That change
+    // re-adds osxSign/osxNotarize here with the CI keychain wiring and the
+    // current @electron/osx-sign option shape. The previous inline block was
+    // dead (no APPLE_IDENTITY set in any workflow) and broke `tsc` after a
+    // dependency bump, so it is removed here rather than carried broken.
   },
   makers: [
-    {
-      // DMG `name` is composed at config-evaluation time as
-      // `PI-Dashboard-darwin-${process.arch}-${pkgVersion}` so each
-      // macOS matrix leg (`darwin/arm64` on `macos-14`, `darwin/x64` on
-      // `macos-15-intel`) produces a distinct artifact basename. Without
-      // this disambiguation, both legs emit `PI Dashboard.dmg` and
-      // `softprops/action-gh-release@v2` silently overwrites one with
-      // the other on upload (it dedups release assets by basename).
-      //
-      // The `process.arch`-vs-`matrix.arch` contract: forge invokes this
-      // file in the host Node process, so `process.arch` is the host
-      // arch. On every supported build path, host arch == target arch:
-      //   - macos-14 runner    → process.arch === "arm64"
-      //   - macos-15-intel     → process.arch === "x64"
-      //   - local --mac-both   → x64 leg wraps the sub-process in
-      //                          `arch -x86_64`, so the wrapped Node
-      //                          sees process.arch === "x64".
-      // `@electron-forge/maker-dmg` does not implement electron-builder's
-      // `${version}` placeholder substitution, so the version is
-      // composed in JS rather than declared as a template string.
-      // See change: fix-darwin-dmg-arch-collision (D1).
-      name: "@electron-forge/maker-dmg",
-      config: {
-        name: `PI-Dashboard-darwin-${process.arch}-${pkgVersion}`,
-        title: "PI Dashboard",
-        icon: path.resolve(__dirname, "resources/icon.icns"),
-        format: "ULFO",
-      },
-    },
+    // macOS DMG + Linux AppImage are produced by electron-builder (config:
+    // electron-builder.yml) in --prepackaged mode, NOT by Forge makers, so the
+    // build also emits latest-mac.yml / latest-linux.yml + app-update.yml that
+    // electron-updater needs. Forge keeps only the .deb maker.
+    // See change: fix-electron-auto-update-pipeline (D1). This supersedes the
+    // maker-dmg arch-collision workaround (fix-darwin-dmg-arch-collision) —
+    // electron-builder's ${arch} artifactName template disambiguates natively.
     {
       name: "@electron-forge/maker-deb",
       config: {
@@ -170,11 +144,6 @@ const config: ForgeConfig = {
         },
       },
     },
-    // AppImage is only supported on x64 (appimagetool has no arm64 build)
-    ...(!process.env.SKIP_APPIMAGE ? [{
-      name: "@pengx17/electron-forge-maker-appimage",
-      config: {},
-    }] : []),
     // Forge has no Windows maker. Windows distribution = ZIP (forge package +
     // zip) plus an NSIS Setup.exe produced by electron-builder as a sidecar
     // step (CI windows-latest). See change: restore-windows-nsis-installer.

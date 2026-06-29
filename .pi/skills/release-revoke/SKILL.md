@@ -171,3 +171,13 @@ release (or a manual workflow_dispatch of deploy-site.yml).
 - If the release was auto-triggered but CI failed mid-matrix (e.g.
   npm published but Electron build failed), this skill is still the
   right tool — it will deprecate npm and delete the partial draft.
+- **Published production releases self-distribute.** Since
+  fix-electron-auto-update-pipeline, production tags (`vX.Y.Z`) publish
+  immediately (not draft) and carry `latest*.yml` update metadata.
+  `gh release delete` removes the release, but electron-updater clients
+  that already polled `/releases/latest` may have cached or downloaded
+  it. Deleting the release stops NEW clients resolving it; it does NOT
+  recall an update already pulled. To supersede a bad published release,
+  cut a higher production tag (`vX.Y.Z+1`) so clients update forward —
+  do not rely on deletion alone. Pre-release tags stay drafts and have
+  no such reach.

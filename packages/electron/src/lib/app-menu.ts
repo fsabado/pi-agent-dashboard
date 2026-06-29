@@ -7,6 +7,47 @@ import { app, Menu, dialog, shell, BrowserWindow, type MenuItemConstructorOption
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { openDoctorWindow } from "./doctor-window.js";
+import { checkForUpdatesNow, getUpdateLogPath } from "./app-updater.js";
+
+/** True when running an unpackaged dev build; hides the update-check item. */
+function isDevMode(): boolean {
+  return !!process.env.ELECTRON_DEV || !(process as { resourcesPath?: string }).resourcesPath;
+}
+
+/**
+ * Manual "Check for updates…" handler. Triggers an immediate check and shows
+ * the up-to-date / error dialog. The update-available case is handled by the
+ * `update-available` event listener registered in main.ts (no duplication).
+ */
+async function handleCheckForUpdates(): Promise<void> {
+  const result = await checkForUpdatesNow();
+  if (result.type === "up-to-date") {
+    dialog.showMessageBox({
+      type: "info",
+      title: "Check for Updates",
+      message: "You're up to date",
+      detail: `PI Dashboard v${result.version} is the latest version.`,
+      buttons: ["OK"],
+    });
+  } else if (result.type === "error") {
+    dialog.showMessageBox({
+      type: "warning",
+      title: "Check for Updates",
+      message: "Update check failed",
+      detail: result.message,
+      buttons: ["OK"],
+    });
+  }
+  // result.type === "update-available": the standard dialog is shown by the
+  // autoUpdater "update-available" listener wired in main.ts.
+}
+
+/** Reveal the updater log file in the OS file manager. */
+function handleViewUpdateLog(): void {
+  const logPath = getUpdateLogPath();
+  if (logPath) shell.showItemInFolder(logPath);
+  else dialog.showMessageBox({ type: "info", title: "Update Log", message: "No update log available.", buttons: ["OK"] });
+}
 
 /**
  * Bundled Git for Windows license probe. Returns the THIRD-PARTY-LICENSE.txt
@@ -64,6 +105,9 @@ export function setupAppMenu(): void {
         label: app.name,
         submenu: [
           { label: `About ${app.name}`, click: () => showAboutDialog() },
+          { type: "separator" },
+          ...(isDevMode() ? [] : [{ label: "Check for Updates…", click: () => handleCheckForUpdates() }]),
+          { label: "View Update Log", click: () => handleViewUpdateLog() },
           { type: "separator" },
           { label: "Doctor...", click: () => showDoctorDialog() },
           { type: "separator" },
@@ -130,6 +174,11 @@ export function setupAppMenu(): void {
         { type: "separator" },
         { role: "togglefullscreen" },
       ],
+    },
+    ...(isDevMode() ? [] : [{ label: "Check for Updates…", click: () => handleCheckForUpdates() }]),
+    {
+      label: "View Update Log",
+      click: () => handleViewUpdateLog(),
     },
     {
       label: "About",

@@ -1,8 +1,7 @@
-import React, { useCallback, useRef, useEffect, type ReactNode } from "react";
+import { mdiChevronLeft, mdiChevronRight } from "@mdi/js";
 import { Icon } from "@mdi/react";
-import { mdiChevronLeft, mdiChevronRight, mdiChevronDoubleLeft } from "@mdi/js";
+import React, { type ReactNode, useCallback, useEffect, useRef } from "react";
 import type { SidebarState } from "../hooks/useSidebarState.js";
-import { COMPACT_THRESHOLD } from "../hooks/useSidebarState.js";
 import { t as i18nT } from "../lib/i18n";
 
 interface Props {
@@ -13,7 +12,7 @@ interface Props {
 const COLLAPSED_WIDTH = 28;
 
 export function ResizableSidebar({ sidebar, children }: Props) {
-  const { width, collapsed, setWidth, cycleState } = sidebar;
+  const { width, collapsed, setWidth, toggleCollapse } = sidebar;
   const dragging = useRef(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -62,8 +61,8 @@ export function ResizableSidebar({ sidebar, children }: Props) {
         style={{ width: COLLAPSED_WIDTH }}
       >
         <button
-          onClick={cycleState}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-5 h-8 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] shadow-md transition-colors cursor-pointer"
+          onClick={toggleCollapse}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-30 w-5 h-8 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] shadow-md transition-colors cursor-pointer"
           title={i18nT("auto.expand_sidebar", undefined, "Expand sidebar")}
           data-testid="sidebar-expand"
         >
@@ -74,7 +73,6 @@ export function ResizableSidebar({ sidebar, children }: Props) {
   }
 
   // Expanded sidebar with drag handle
-  const isCompact = width <= COMPACT_THRESHOLD;
   return (
     <div
       ref={sidebarRef}
@@ -90,18 +88,15 @@ export function ResizableSidebar({ sidebar, children }: Props) {
         className="w-1 cursor-col-resize hover:bg-blue-500/30 active:bg-blue-500/50 flex-shrink-0"
         data-testid="drag-handle"
       />
-      {/* Cycle button — floats on the sidebar edge */}
+      {/* Collapse button — floats on the sidebar edge */}
       <button
-        onClick={cycleState}
+        onClick={toggleCollapse}
         onMouseDown={(e) => e.stopPropagation()}
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-5 h-8 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] shadow-md transition-colors cursor-pointer"
-        title={isCompact
-          ? i18nT("auto.collapse_sidebar", undefined, "Collapse sidebar")
-          : i18nT("auto.compact_sidebar", undefined, "Compact sidebar")
-        }
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-30 w-5 h-8 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] shadow-md transition-colors cursor-pointer"
+        title={i18nT("auto.collapse_sidebar", undefined, "Collapse sidebar")}
         data-testid="sidebar-collapse"
       >
-        <Icon path={isCompact ? mdiChevronLeft : mdiChevronDoubleLeft} size={0.55} />
+        <Icon path={mdiChevronLeft} size={0.55} />
       </button>
     </div>
   );

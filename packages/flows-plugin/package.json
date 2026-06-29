@@ -1,6 +1,6 @@
 {
   "name": "@blackbelt-technology/pi-dashboard-flows-plugin",
-  "version": "0.5.5",
+  "version": "0.5.4",
   "description": "Flow rendering plugin for pi-dashboard — pi-flows event reaction (FlowDashboard, FlowAgentCard, FlowArchitect, etc.)",
   "license": "MIT",
   "publishConfig": {
@@ -33,6 +33,7 @@
     "id": "flows",
     "displayName": "Flows",
     "priority": 100,
+    "configSchema": "./src/configSchema.json",
     "client": "./src/client/index.tsx",
     "server": "./src/server/index.ts",
     "bridge": "./src/bridge/index.ts",
@@ -47,25 +48,24 @@
         "component": "FlowDashboardClaim"
       },
       {
-        "slot": "content-header-sticky",
-        "component": "FlowSummaryClaim"
-      },
-      {
         "slot": "content-view",
         "component": "FlowYamlPreviewClaim",
         "predicate": "isFlowYamlPreviewActive"
       },
       {
-        "slot": "shell-overlay-route",
-        "component": "FlowAgentPopoutClaim",
-        "path": "/session/:sid/flow/:flowId/agent/:agentId",
-        "sessionParam": "sid"
+        "slot": "tool-renderer",
+        "component": "FlowWriteToolRenderer",
+        "toolName": "flow_write"
       },
       {
-        "slot": "shell-overlay-route",
-        "component": "FlowAgentPopoutClaim",
-        "path": "/session/:sid/architect",
-        "sessionParam": "sid"
+        "slot": "tool-renderer",
+        "component": "FlowAgentsToolRenderer",
+        "toolName": "flow_agents"
+      },
+      {
+        "slot": "settings-section",
+        "component": "FlowsSettings",
+        "tab": "general"
       }
     ]
   },
@@ -75,9 +75,10 @@
   },
   "//deps-rationale": "client-utils retained for hooks (useMobile, useZoomPan) and Phase-2 extension-ui slot consumers (AgentMetricSlot, BreadcrumbSlot, GateSlot, aggregateGateState helper). All UI primitive components (AgentCardShell, MarkdownContent, ConfirmDialog, DialogPortal, SearchableSelectDialog, ZoomControls, format-tokens, format-duration) flow through the UI primitive registry per add-plugin-ui-primitive-registry.",
   "dependencies": {
-    "@blackbelt-technology/dashboard-plugin-runtime": "^0.5.5",
-    "@blackbelt-technology/pi-dashboard-client-utils": "^0.5.5",
-    "@blackbelt-technology/pi-dashboard-shared": "^0.5.5"
+    "@blackbelt-technology/dashboard-plugin-runtime": "^0.5.4",
+    "@blackbelt-technology/pi-dashboard-client-utils": "^0.5.4",
+    "@blackbelt-technology/pi-dashboard-shared": "^0.5.4",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

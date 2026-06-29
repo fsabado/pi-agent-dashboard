@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { parseFlowYaml, flowToMermaid } from "../client/flow-yaml-parse.js";
+import { describe, expect, it } from "vitest";
+import { flowToMermaid, parseFlowYaml } from "../client/flow-yaml-parse.js";
 
 const YAML = `
 name: invoice-research
@@ -53,8 +53,72 @@ describe("flowToMermaid", () => {
     expect(m.startsWith("graph LR")).toBe(true);
     expect(m).toContain('validate-nav[["⌗ validate-nav"]]'); // code shape
     expect(m).toContain('approve{"◈ approve"}'); // code-decision shape
-    expect(m).toContain("extract --> validate-nav"); // forward edge from blockedBy
     expect(m).toContain("approve -->|auto| export"); // forward branch
     expect(m).toContain('approve -. "rework ↺" .-> extract'); // backward branch (loop)
+  });
+
+  it("renders on_complete routing edges UNLABELED (happy-path default)", () => {
+    // Policy (change: fix-flow-ui-graph-zoom-summary): an `on_complete` route is
+    // the happy path — render as a plain arrow, never `|on_complete|`, so an
+    // on_complete-wired flow's spine isn't labelled on every edge.
+    const flow = parseFlowYaml(YAML)!;
+    const m = flowToMermaid(flow);
+    // extract.on_complete=validate-nav AND validate-nav.blockedBy=[extract] -> one route edge, unlabeled
+    expect(m).toContain("extract --> validate-nav");
+    expect(m).not.toContain("extract -->|on_complete| validate-nav");
+    expect(m).not.toContain("|on_complete|");
+    // on_error -> park, but no `park` step exists -> edge skipped
+    expect(m).not.toContain("park");
+  });
+
+  it("renders on_error routes topology-distinctly (returning ↺ vs terminal ⊗)", () => {
+    const flow = parseFlowYaml(`
+name: topo
+steps:
+  - id: validate
+    type: code-decision
+    blockedBy: []
+    on_error: fixup
+  - id: transform
+    type: agent
+    blockedBy: [validate]
+  - id: fixup
+    type: agent
+    blockedBy: []
+    on_complete: validate
+  - id: finalize
+    type: agent
+    blockedBy: [transform]
+    on_error: notify
+  - id: notify
+    type: agent
+    blockedBy: []
+`)!;
+    const m = flowToMermaid(flow);
+    // returning handler (fixup rejoins validate) → dashed loop marker
+    expect(m).toContain('validate -. "on_error ↺" .-> fixup');
+    // terminal handler (notify is a sink) → dashed terminal marker
+    expect(m).toContain('finalize -. "on_error ⊗" .-> notify');
+    // an on_error route is never rendered as a solid labeled forward edge
+    expect(m).not.toContain("-->|on_error|");
+  });
+
+  it("renders implicit-segment edges and emits no flow-ref shape", () => {
+    const flow = parseFlowYaml(`
+name: seg
+steps:
+  - id: decide
+    type: fork
+    branches: { go: end }
+  - id: orphan
+    type: agent
+  - id: end
+    type: agent
+`)!;
+    const m = flowToMermaid(flow);
+    // `orphan` has no blockedBy and no incoming edge -> implicit edge from the
+    // preceding separator `decide`.
+    expect(m).toContain("decide --> orphan");
+    expect(m).not.toContain("[[\"orphan");
   });
 });

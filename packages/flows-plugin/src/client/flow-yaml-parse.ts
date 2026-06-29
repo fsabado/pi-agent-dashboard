@@ -11,6 +11,7 @@
  * See change: rework-flows-plugin-for-new-pi-flows.
  */
 import { parse as parseYaml } from "yaml";
+import { deriveFlowEdges, type FlowEdgeStep } from "./flow-edges.js";
 
 export interface ParsedFlowStep {
   id: string;
@@ -91,30 +92,47 @@ function nodeShape(type: string, id: string, label: string): string {
     case "code-decision": return `${id}{"◈ ${label}"}`;
     case "agent-decision":
     case "fork": return `${id}{"◇ ${label}"}`;
-    case "flow-ref": return `${id}[["${label}"]]`;
     default: return `${id}(["${label}"])`;
   }
 }
 
-/** Build a `graph LR` Mermaid string from a parsed flow (forward edges from
- *  blockedBy; labeled edges from decision branches, dashed when backward). */
+/** Build a `graph LR` Mermaid string from a parsed flow. Edges come from the
+ *  shared `deriveFlowEdges` (blockedBy + branches + on_complete/on_error +
+ *  implicit-segment), so the snapshot matches the live FlowGraph. Backward
+ *  edges (loops) render dashed. See change: improve-flow-ui. */
 export function flowToMermaid(flow: ParsedFlow): string {
-  const order = new Map(flow.steps.map((s, i) => [s.id, i]));
   const lines: string[] = ["graph LR"];
   for (const s of flow.steps) {
     lines.push(`  ${nodeShape(s.type, s.id, s.id)}`);
   }
-  for (const s of flow.steps) {
-    for (const dep of s.blockedBy) {
-      if (order.has(dep)) lines.push(`  ${dep} --> ${s.id}`);
-    }
-    if (s.branches) {
-      for (const [label, target] of Object.entries(s.branches)) {
-        if (!order.has(target)) continue;
-        const backward = (order.get(target) ?? 0) <= (order.get(s.id) ?? 0);
-        lines.push(backward
-          ? `  ${s.id} -. "${label} ↺" .-> ${target}`
-          : `  ${s.id} -->|${label}| ${target}`);
+  const edges = deriveFlowEdges(
+    flow.steps.map((s): FlowEdgeStep => ({
+      id: s.id,
+      type: s.type,
+      blockedBy: s.blockedBy,
+      branches: s.branches,
+      onComplete: s.onComplete,
+      onError: s.onError,
+    })),
+  );
+  for (const e of edges) {
+    if (e.kind === "route" && e.label === "on_error") {
+      // Topology-distinct on_error, mirroring the live FlowGraph: ↺ returning
+      // (handler rejoins the flow — a recovery loop) vs ⊗ terminal (a sink/exit).
+      // Always dashed so it reads as an exception edge, never the happy path.
+      const marker = e.routeTopology === "terminal" ? "⊗" : "↺";
+      lines.push(`  ${e.from} -. "on_error ${marker}" .-> ${e.to}`);
+    } else {
+      // `on_complete` is the happy-path default — render unlabeled so an
+      // on_complete-wired flow's spine reads as plain arrows, not repeated
+      // labels (matches the live FlowGraph). See change: fix-flow-ui-graph-zoom-summary.
+      const lbl = e.label === "on_complete" ? undefined : e.label;
+      if (e.backward) {
+        lines.push(`  ${e.from} -. "${lbl ?? ""} ↺" .-> ${e.to}`);
+      } else if (lbl) {
+        lines.push(`  ${e.from} -->|${lbl}| ${e.to}`);
+      } else {
+        lines.push(`  ${e.from} --> ${e.to}`);
       }
     }
   }

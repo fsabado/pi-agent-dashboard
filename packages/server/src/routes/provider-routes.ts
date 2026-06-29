@@ -72,6 +72,19 @@ export function registerProviderRoutes(fastify: FastifyInstance, deps: { network
 
       const incoming = body.providers as Record<string, ProviderEntry>;
 
+      // Blank-name guard: the client preflights this, but a direct PUT can
+      // still smuggle "" / whitespace-only provider names. Reject them at the
+      // API boundary so they never reach providers.json. See change:
+      // fix-custom-provider-save-and-auth.
+      for (const name of Object.keys(incoming)) {
+        if (name.trim() === "") {
+          return reply.code(400).send({
+            success: false,
+            error: "Provider name is required",
+          });
+        }
+      }
+
       // Recursion guard: reject providers pointing back at the dashboard
       const dashboardPort = deps.port ?? 8000;
       const tunnelUrl = getTunnelUrl();
@@ -89,6 +102,19 @@ export function registerProviderRoutes(fastify: FastifyInstance, deps: { network
       }
 
       const existing = readProvidersRaw();
+
+      // Masked-sentinel guard: `***` means "keep the existing key" and is only
+      // valid when the named provider already exists. Persisting `***` as a
+      // literal apiKey would corrupt the credential, so reject it when there is
+      // no existing entry to preserve. See change: fix-custom-provider-save-and-auth.
+      for (const [name, entry] of Object.entries(incoming)) {
+        if (entry.apiKey === REDACTED && !existing[name]) {
+          return reply.code(400).send({
+            success: false,
+            error: `Provider "${name}" has no saved API key to preserve; enter the API key before saving.`,
+          });
+        }
+      }
 
       // Merge: preserve redacted apiKey values from existing file
       const merged: Record<string, ProviderEntry> = {};

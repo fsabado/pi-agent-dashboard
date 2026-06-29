@@ -155,7 +155,20 @@ if [ "$PLATFORM" = "linux" ]; then
 
   cd "$ELECTRON_DIR"
   cd /build/packages/electron
+  # Forge make produces the .deb (only remaining Forge maker) + the packaged
+  # app dir. The AppImage + latest-linux.yml + app-update.yml come from
+  # electron-builder --prepackaged (Forge AppImage maker removed).
+  # See change: fix-electron-auto-update-pipeline (D1).
   ../../node_modules/.bin/electron-forge make --platform linux --arch "$ARCH"
+  PKG_DIR=$(find out -maxdepth 1 -type d -name 'PI-Dashboard-linux-*' | head -1)
+  if [ -z "$PKG_DIR" ]; then
+    echo "::error:: Forge packaged dir not found under out/"; ls -la out || true; exit 1
+  fi
+  ../../node_modules/.bin/electron-builder --linux AppImage \
+    --prepackaged "$PKG_DIR" \
+    --config electron-builder.yml \
+    -c.linux.artifactName='PI-Dashboard-${version}-'"$ARCH"'.${ext}' \
+    --publish never
 
   echo ""
   echo "✓ Build complete for linux-$ARCH"

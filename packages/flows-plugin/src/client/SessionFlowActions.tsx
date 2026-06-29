@@ -8,6 +8,7 @@ import type {
   FlowState,
 } from "@blackbelt-technology/pi-dashboard-shared/types.js";
 import { FlowLaunchDialog } from "./FlowLaunchDialog.js";
+import { FlowAuthorPromptDialog } from "./FlowAuthorPromptDialog.js";
 import { FlowActivityBadge } from "./FlowActivityBadge.js";
 import { useFlowsSessionState } from "./FlowsSessionStateContext.js";
 import { UI_PRIMITIVE_KEYS } from "@blackbelt-technology/pi-dashboard-shared/dashboard-plugin/ui-primitives.js";
@@ -34,8 +35,12 @@ export function SessionFlowActions({
   editMode: boolean;
   hasFlowsDelete?: boolean;
   onFlowAction: (action: string, opts?: { flowName?: string; task?: string; description?: string }) => void;
-  /** Launch the edit-flow skill for an existing flow (name) or a new flow (undefined). */
-  onEditFlow: (flowName?: string) => void;
+  /**
+   * Launch the manage-flows skill for an existing flow (name) or a new flow
+   * (undefined), carrying the user's stated intent (description for new, change
+   * instruction for edit; empty string when none given).
+   */
+  onEditFlow: (flowName: string | undefined, instruction: string) => void;
   /** Current flow state for this session. Drives the status pill rendered above the action buttons. */
   flowState?: FlowState | null;
   /** Dispatch flow_control abort. Called by the running-flow pill's Abort button. */
@@ -45,6 +50,8 @@ export function SessionFlowActions({
   const SearchableSelectDialog = useUiPrimitive(UI_PRIMITIVE_KEYS.searchableSelectDialog);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editPickerOpen, setEditPickerOpen] = useState(false);
+  // After picking from the edit launcher, capture intent before launching the skill.
+  const [authorTarget, setAuthorTarget] = useState<{ mode: "new" | "edit"; flowName?: string } | null>(null);
   const [deletePickerOpen, setDeletePickerOpen] = useState(false);
   const [deleteFlowName, setDeleteFlowName] = useState<string | null>(null);
   const [selectedFlow, setSelectedFlow] = useState<FlowInfo | null>(null);
@@ -154,10 +161,25 @@ export function SessionFlowActions({
           placeholder="Pick a flow to edit, or + New flow…"
           emptyMessage="No flows yet — pick + New flow"
           onSelect={(value) => {
-            onEditFlow(value === "__new__" ? undefined : value);
+            setAuthorTarget(
+              value === "__new__" ? { mode: "new" } : { mode: "edit", flowName: value },
+            );
             setEditPickerOpen(false);
           }}
           onCancel={() => setEditPickerOpen(false)}
+        />
+      )}
+
+      {/* New / Edit: capture intent → launch the manage-flows skill */}
+      {authorTarget && (
+        <FlowAuthorPromptDialog
+          mode={authorTarget.mode}
+          flowName={authorTarget.flowName}
+          onSubmit={(instruction) => {
+            onEditFlow(authorTarget.flowName, instruction);
+            setAuthorTarget(null);
+          }}
+          onCancel={() => setAuthorTarget(null)}
         />
       )}
 
@@ -234,13 +256,17 @@ export function SessionFlowActionsClaim({ session }: { session: DashboardSession
       hasFlowsDelete={hasFlowsDelete}
       flowState={flowState}
       onAbortFlow={() => send({ type: "flow_control", sessionId: session.id, action: "abort" })}
-      onEditFlow={(flowName) =>
-        send({
-          type: "send_prompt",
-          sessionId: session.id,
-          text: flowName ? `/skill:edit-flow ${flowName}` : "/skill:edit-flow",
-        })
-      }
+      onEditFlow={(flowName, instruction) => {
+        const intent = instruction.trim();
+        // New flow: instruction describes what to build. Edit: flow name is
+        // token-1 (the skill reads that file), instruction follows on a new line.
+        const text = flowName
+          ? intent
+            ? `/skill:manage-flows ${flowName}\n\n${intent}`
+            : `/skill:manage-flows ${flowName}`
+          : `/skill:manage-flows ${intent}`;
+        send({ type: "send_prompt", sessionId: session.id, text });
+      }}
       onFlowAction={(action, opts) =>
         send({
           type: "flow_management",

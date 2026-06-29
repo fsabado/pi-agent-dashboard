@@ -7,7 +7,8 @@ description: >
   triggers the Release workflow that publishes **8 npm packages** (root +
   shared/extension/server/web/image-fit/kb/kb-extension via `npm publish -ws --include-workspace-root`)
   and the Electron artifacts
-  and creates a draft GitHub Release. Use when the user says "cut a
+  and creates a GitHub Release (published automatically for production
+  tags `vX.Y.Z`; draft for pre-release tags `vX.Y.Z-rc.N`). Use when the user says "cut a
   release", "release vX.Y.Z", "publish a new version", "tag a release".
 license: MIT
 metadata:
@@ -18,8 +19,12 @@ metadata:
 # Cut a pi-agent-dashboard Release
 
 Canonical reference: [`docs/release-process.md`](../../../docs/release-process.md).
-This skill automates steps 1–5 of that doc but **stops before publishing
-the draft GitHub Release** — the human always clicks Publish.
+This skill automates steps 1–5 of that doc. **Production tags (`vX.Y.Z`)
+publish the GitHub Release automatically** — electron-updater's default
+GitHub provider only resolves published, non-draft releases, so a draft
+would silently block auto-update. **Pre-release tags (`vX.Y.Z-rc.N`) stay
+drafts** so a maintainer can eyeball artifacts before flipping to published.
+See change: fix-electron-auto-update-pipeline.
 
 ## Pre-flight (MUST pass before touching anything)
 
@@ -206,21 +211,23 @@ Next steps (human):
      • publish @blackbelt-technology/pi-dashboard to npm
      • build Electron installers (macOS DMG × 2 — Apple Silicon +
        Intel, Linux DEB+AppImage, Windows NSIS+ZIP+portable per arch)
-     • create a DRAFT GitHub Release with artifacts attached
-2. Open the draft release:
+     • create a GitHub Release with artifacts + latest*.yml metadata.
+       PRODUCTION tags (vX.Y.Z) publish immediately; PRE-RELEASE tags
+       (vX.Y.Z-rc.N) land as a draft.
+2. Open the release:
    https://github.com/BlackBeltTechnology/pi-agent-dashboard/releases
 3. Verify the body (auto-extracted from CHANGELOG.md [<version>] section)
    and all 7 platform artifacts are attached:
-     • PI-Dashboard-darwin-arm64-<ver>.dmg  (Apple Silicon)
-     • PI-Dashboard-darwin-x64-<ver>.dmg    (Intel)
+     • PI-Dashboard-<ver>-arm64.dmg  (Apple Silicon)
+     • PI-Dashboard-<ver>-x64.dmg    (Intel)
      • pi-dashboard_<ver>_amd64.deb         (Linux x64)
      • pi-dashboard_<ver>_arm64.deb         (Linux arm64)
      • PI-Dashboard-<ver>.AppImage          (Linux x64)
      • PI-Dashboard-<ver> Setup.exe + .zip + portable.exe (Windows x64)
      • .zip + portable.exe (Windows arm64)
-4. Click "Publish release" — this fires `release: published` which
-   triggers the Deploy Site workflow to redeploy GitHub Pages with the
-   new download version.
+4. PRODUCTION tag: the release is already published — nothing to click;
+   `release: published` fires automatically and redeploys GitHub Pages.
+   PRE-RELEASE tag: review the draft, then click "Publish release".
 
 If something is wrong, see `.pi/skills/release-revoke/SKILL.md`.
 ```
@@ -229,7 +236,9 @@ If something is wrong, see `.pi/skills/release-revoke/SKILL.md`.
 
 - **Never skip pre-flight.** A failing test or dirty tree means the
   release is not ready.
-- **Never auto-publish.** Stop at the draft release.
+- **Production tags publish automatically** (electron-updater needs a
+  published release). Only pre-release tags (`-rc.N`, `-beta.N`) stay
+  drafts for manual review — never hand-edit a production release to draft.
 - **Never force-push a tag.** If the tag already exists on origin,
   surface the conflict and hand off to the revoke skill.
 - **One version at a time.** If the user asks to release two versions

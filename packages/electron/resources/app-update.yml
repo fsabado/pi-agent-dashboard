@@ -1,0 +1,4 @@
+provider: github
+owner: BlackBeltTechnology
+repo: pi-agent-dashboard
+updaterCacheDirName: pi-dashboard-updater

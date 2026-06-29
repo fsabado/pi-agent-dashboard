@@ -1,9 +1,14 @@
 {
-  "appId": "hu.blackbelt.pi-dashboard",
+  "appId": "com.blackbelt-technology.pi-dashboard",
   "productName": "PI Dashboard",
   "executableName": "pi-dashboard",
   "directories": {
     "output": "out/make/nsis"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "BlackBeltTechnology",
+    "repo": "pi-agent-dashboard"
   },
   "win": {
     "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }],
